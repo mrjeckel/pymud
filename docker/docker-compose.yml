@@ -5,19 +5,26 @@ services:
     image: python:3.10.12-alpine3.18
     command: >
       sh -c "pip install -r /requirements.txt
+      && alembic revision --autogenerate
+      && alembic upgrade head
       && python /pymud.py"
     environment:
-      - DB_HOST=db
+      - DB_HOST=pymud-db-1
       - DB_PORT=5432
       - DB_USER=mud_admin
       - DB_PASSWORD=mud123
-      - DB_NAME=mud123
+      - DB_NAME=mud
+      - PYTHONPATH=/:/src
     ports:
       - 5000:5000
     volumes:
       - ../src:/src
       - ../pymud.py:/pymud.py
       - ../requirements.txt:/requirements.txt
+      - ../alembic.ini:/alembic.ini
+      - ../migrations:/migrations
+    depends_on:
+      - db
       
   db:
     image: postgres:15.3-alpine3.18
@@ -26,7 +33,5 @@ services:
       - POSTGRES_DB=mud
       - POSTGRES_USER=mud_admin
       - POSTGRES_PASSWORD=mud123
-    depends_on:
-      - mud
     ports:
       - 9876:5432
