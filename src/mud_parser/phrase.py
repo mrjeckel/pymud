@@ -13,7 +13,7 @@ class Phrase:
     Encapsulates a command sent from a client
     """
     def __init__(self, phrase: str):
-        self.verb, self.ins, self.noun_chunks = self._parse(phrase)
+        self.verb, self.ins, self.noun_chunks, self.descriptors = self._parse(phrase)
 
     def _parse(self, phrase: str) -> Tuple[str, List[str], List[str]]:
         """
@@ -32,9 +32,10 @@ class Phrase:
             assert(len(ins) == noun_count - 1)
             assert(noun_count == len(noun_chunks))
         else:
+            noun_chunks = []
             assert(len(ins) == 0)
 
-        return verbs[0], ins, noun_chunks
+        return verbs[0], ins, noun_chunks, descriptors
     
     def _build_noun_chunks(self, doc: spacy.tokens.doc.Doc) -> List[str]:
         """
@@ -54,6 +55,9 @@ class Phrase:
         return noun_chunks
     
     def __iter__(self):
+        """
+        Builds a list with seperate parts of speech as elements
+        """
         self.pos = self.verb
         pos_list = [self.verb]
 
@@ -64,7 +68,7 @@ class Phrase:
             except IndexError:
                 pass
 
-        logging.debug(f'iterating over {pos_list}')
+        logging.debug(f'phrase parser iterating over: {pos_list}')
         self.pos_list = pos_list
         return self
     
