@@ -7,6 +7,7 @@ services:
       sh -c "pip install -r /requirements.txt
       && alembic revision --autogenerate
       && alembic upgrade head
+      && python -m spacy download en_core_web_sm
       && python /pymud.py"
     environment:
       - DB_HOST=pymud-db-1
