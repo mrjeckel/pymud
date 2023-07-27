@@ -1,6 +1,9 @@
-from typing import List, Tuple
 import logging
 import spacy
+
+from typing import List, Tuple
+from mud_parser.verb.emote import Emote, EMOTE_LIST
+from mud_parser.verb.action import Action, ACTION_DICT
 NLP = spacy.load("en_core_web_sm")
 
 class Phrase:
@@ -10,6 +13,8 @@ class Phrase:
     EXCLUDE_FROM_NOUN_CHUNKS = ['DET']
 
     def __init__(self, phrase: str):
+        self.is_emote = False
+        self.is_action = False
         self.verb, self.ins, self.noun_chunks, self.descriptors = self._parse(phrase)
 
     def _parse(self, phrase: str) -> Tuple[str, List[str], List[str]]:
@@ -17,24 +22,24 @@ class Phrase:
         Parse parts of speech from a string phrase - skip articles
         """
         doc = NLP(phrase)
+        
+        verb = doc[0].text
+
         ins = [token.text for token in doc if token.pos_ == 'ADP']
-        # TODO: support JJ form for emote descriptors; we'll add a class to handle this
-        descriptors = [token.text for token in doc if token.pos_ in ('ADV')]
-
-        verbs = [token.text for token in doc if token.pos_ == 'VERB']
-        assert(len(verbs) == 1)
-        assert(0 <= len(descriptors) <= 1)
-
-        # TODO: add a verb lookup to determine the appropriate number of noun_chunks , descriptors and ins
+        descriptors = []
         noun_chunks = self._build_noun_chunks(doc)
-        if noun_chunks and descriptors:
-            assert(len(ins) == len(noun_chunks) == 1)
-        elif noun_chunks:
-            assert(len(ins) == len(noun_chunks) - 1)
-        else:
-            assert(len(ins) == 0)
 
-        return verbs[0], ins, noun_chunks, descriptors
+        if verb in ACTION_DICT.keys():
+            self.is_action = True
+            ACTION_DICT[verb].validate_phrase_structure(noun_chunks, ins)
+        elif verb in EMOTE_LIST:
+            self.is_emote = True
+            descriptors = [Emote.complete_adverb(doc[1].text)] if len(doc) > 1 else []
+            Emote.validate_phrase_structure(noun_chunks, descriptors)
+        else:
+            raise AssertionError("Unknown verb type!")
+            
+        return verb, ins, noun_chunks, descriptors
     
     def _build_noun_chunks(self, doc: spacy.tokens.doc.Doc) -> List[str]:
         """
@@ -50,13 +55,12 @@ class Phrase:
         """
         Builds a list with seperate parts of speech as elements
         """
-        self.pos = self.verb
         pos_list = [self.verb]
 
-        if len(self.noun_chunks) == 1 and len(self.descriptors) == 1:
+        if self.is_emote:
             pos_list.append(self.descriptors[0])
             pos_list.append(self.noun_chunks[0])
-        else:
+        elif self.is_action:
             for chunk_index, chunk in enumerate(self.noun_chunks):
                 pos_list.append(chunk)
                 try:

@@ -39,7 +39,7 @@ class TestPhrase(unittest.TestCase):
         """
         Test emote verb
         """
-        test_phrase = Phrase('laugh maniacally')
+        test_phrase = Phrase('laugh')
         self.assertEqual(test_phrase.verb, 'laugh')
 
     def test_emote_with_adverb(self):
@@ -50,12 +50,21 @@ class TestPhrase(unittest.TestCase):
         self.assertEqual(test_phrase.verb, 'laugh')
         self.assertEqual(test_phrase.descriptors[-1], 'maniacally')
 
+    def test_emote_with_adjective(self):
+        """
+        Test emote verb, adjective modifier
+        """
+        test_phrase = Phrase('laugh maniac')
+        self.assertEqual(test_phrase.verb, 'laugh')
+        self.assertEqual(test_phrase.descriptors[-1], 'maniacally')
+
     def test_emote_with_two_modifiers(self):
         """
         Test emote with two modifiers
         """
-        with self.assertRaises(AssertionError):
-            Phrase('laugh joyfully maniacally')
+        test_phrase = Phrase('laugh joyfully maniacally')
+        self.assertEqual(test_phrase.verb, 'laugh')
+        self.assertEqual(test_phrase.descriptors[-1], 'joyfully')
 
     def test_action_iteration(self):
         """
