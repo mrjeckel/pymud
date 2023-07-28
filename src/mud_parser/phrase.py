@@ -3,7 +3,8 @@ import spacy
 
 from typing import List, Tuple
 from mud_parser.verb.emote import Emote, EMOTE_LIST
-from mud_parser.verb.action import Action, ACTION_DICT
+from mud_parser.verb.action import ACTION_DICT
+
 NLP = spacy.load("en_core_web_sm")
 
 class Phrase:
@@ -22,9 +23,7 @@ class Phrase:
         Parse parts of speech from a string phrase - skip articles
         """
         doc = NLP(phrase)
-        
         verb = doc[0].text
-
         ins = [token.text for token in doc if token.pos_ == 'ADP']
         descriptors = []
         noun_chunks = self._build_noun_chunks(doc)
