@@ -48,6 +48,14 @@ class MudThread(threading.Thread):
 
     def run(self):
         logging.info(f'Client connected: {self.address}')
+
+        logged_in = False
+        self.connection.send('Please enter character name:')
+        while not logged_in:
+            data = self.connection.recv(self.buffer_size)
+            # TODO: sqlalchemy query to find matching character
+            # TODO: sqlalchemy query to check matching password
+
         data = self.connection.recv(self.buffer_size)
 
         while data:

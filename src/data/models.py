@@ -1,21 +1,14 @@
-from typing import List
-from sqlalchemy import Table, Column, ForeignKey
+import bcrypt
+from sqlalchemy import ForeignKey
 from sqlalchemy.types import Integer, String
 from sqlalchemy.orm import (DeclarativeBase,
                             Mapped,
                             mapped_column,
-                            relationship)
+                            validates)
 
 class Base(DeclarativeBase):
     pass
 
-room_exit_association = Table(
-    'room_exit',
-    Base.metadata,
-    Column('room_id', Integer, ForeignKey('room.id')),
-    Column('exit_id', Integer, ForeignKey('exit.id')),
-    )
-    
 class Item(Base):
     __tablename__ = 'item'
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -42,13 +35,33 @@ class MobileType(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     type_name: Mapped[str] = mapped_column(String(32), unique=True)
 
-class Exit(Base):
-    __tablename__ = 'exit'
+class Direction(Base):
+    __tablename__ = 'direction'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    exit_name: Mapped[str] = mapped_column(String(12), unique=True)
+    dirn_name: Mapped[str] = mapped_column(String(10), unique=True)
 
 class Room(Base):
     __tablename__ = 'room'
     id: Mapped[int] = mapped_column(primary_key=True)
     desc: Mapped[str] = mapped_column(String(255))
-    exits: Mapped[List[Exit]] = relationship(secondary='room_exit_association')
+
+class RoomConnection(Base):
+    __tablename__ = 'room_connection'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    direction: Mapped[str] = mapped_column(ForeignKey('direction.dir_name'))
+    room_id: Mapped[str] = mapped_column(ForeignKey('room.id'))
+    destination_id: Mapped[str] = mapped_column(ForeignKey('room.id'))
+
+class Character(Base):
+    __tablename__ = 'character'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(16))
+    password: Mapped[str] = mapped_column(String(60))
+
+    def validate_password(self, password):
+        return bcrypt.checkpw(password, self.password)
+    
+    @validates('password')
+    def _hash_password(self, password):
+        salt = bcrypt.gensalt()
+        return bcrypt.hashpw(password, salt)

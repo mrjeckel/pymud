@@ -2,12 +2,12 @@ version: '0.1'
 name: pymud
 services:
   mud:
-    image: python:3.10.12-alpine3.18
+    image: python:3.10
     command: >
       sh -c "pip install -r /requirements.txt
+      && python -m spacy download en_core_web_sm
       && alembic revision --autogenerate
       && alembic upgrade head
-      && python -m spacy download en_core_web_sm
       && python /pymud.py"
     environment:
       - DB_HOST=pymud-db-1
@@ -28,7 +28,7 @@ services:
       - db
       
   db:
-    image: postgres:15.3-alpine3.18
+    image: postgres:15.3
     restart: always
     environment:
       - POSTGRES_DB=mud
