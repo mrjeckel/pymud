@@ -1,10 +1,18 @@
-import bcrypt
+import logging
+import hashlib
 from sqlalchemy import ForeignKey
 from sqlalchemy.types import Integer, String
 from sqlalchemy.orm import (DeclarativeBase,
                             Mapped,
                             mapped_column,
-                            validates)
+                            validates,
+                            Session)
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import (MultipleResultsFound,
+                                NoResultFound)
+from pymud import MudServer
+from exceptions import (LoginError,
+                        CharacterExists)
 
 class Base(DeclarativeBase):
     pass
@@ -38,7 +46,7 @@ class MobileType(Base):
 class Direction(Base):
     __tablename__ = 'direction'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    dirn_name: Mapped[str] = mapped_column(String(10), unique=True)
+    dir_name: Mapped[str] = mapped_column(String(10), unique=True)
 
 class Room(Base):
     __tablename__ = 'room'
@@ -55,13 +63,29 @@ class RoomConnection(Base):
 class Character(Base):
     __tablename__ = 'character'
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(16))
-    password: Mapped[str] = mapped_column(String(60))
+    name: Mapped[str] = mapped_column(String(16), unique=True)
+    account_hash: Mapped[str] = mapped_column(String(64))
 
-    def validate_password(self, password):
-        return bcrypt.checkpw(password, self.password)
+    @classmethod
+    def validate_account(cls, character, hash):
+        with Session(MudServer.engine) as session:
+            try:
+                account_hash = session.query(Character.account_hash).where(Character.name == character).one()
+            except (NoResultFound, MultipleResultsFound) as e:
+                logging.exception(e)
+                raise LoginError from e
+        return hash == account_hash
     
-    @validates('password')
-    def _hash_password(self, password):
-        salt = bcrypt.gensalt()
-        return bcrypt.hashpw(password, salt)
+    @classmethod
+    def create_character(cls, name, hash):
+        with Session(MudServer.engine) as session:
+            try:
+                session.add(Character(name=name, account_hash=hash))
+                session.commit()
+            except IntegrityError as e:
+                logging.exception(e)
+                raise CharacterExists from e
+        
+    @validates('account_hash')
+    def _hash_password(self, key, hash):
+        return hashlib.sha256(hash.encode('utf-8')).hexdigest()
