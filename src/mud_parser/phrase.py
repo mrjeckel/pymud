@@ -2,7 +2,7 @@ import logging
 import spacy
 
 from typing import List, Tuple
-from mud_parser.verb.emote import Emote, EMOTE_LIST
+from mud_parser.verb.emote import Emote, EMOTE_DICT
 from mud_parser.verb.action import ACTION_DICT
 
 NLP = spacy.load("en_core_web_sm")
@@ -31,7 +31,7 @@ class Phrase:
         if verb in ACTION_DICT.keys():
             self.is_action = True
             ACTION_DICT[verb].validate_phrase_structure(noun_chunks, ins)
-        elif verb in EMOTE_LIST:
+        elif verb in EMOTE_DICT.keys():
             self.is_emote = True
             descriptors = [Emote.complete_adverb(doc[1].text)] if len(doc) > 1 else []
             Emote.validate_phrase_structure(noun_chunks, descriptors)

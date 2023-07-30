@@ -2,10 +2,8 @@
 import socket
 import threading
 import logging
-import json
 
-from data.models import Character
-from exceptions import LoginError
+from login_manager import LoginManager
 from config import (HOST,
                     PORT,
                     DATABASE_ADDRESS,
@@ -40,21 +38,10 @@ class MudThread(threading.Thread):
         logging.info(f'Client connected: {self.address}')
 
         if not self.logged_in:
+            # TODO: send json on first message upon front-end connection
             # data = self.connection.recv(self.buffer_size)
             data = b'{"character_name": "Rha", "account_hash": "1"}'
-            login_info = json.loads(data)
-
-            try:
-                if Character.validate_account(login_info['character_name'], login_info['account_hash']):
-                    self.connection.send(f'Welcome {login_info["character_name"]}!'.encode('utf-8'))
-                    logging.info(f'{login_info["character_name"]} succesfully authenticated!')
-                    self.logged_in = True
-                else:
-                    self.connection.send(f'Invalid login credentials!'.encode('utf-8'))
-                    logging.info(f'Invalid login: {login_info["character_name"]} - {self.address}')
-            except LoginError as e:
-                self.connection.send(f'No character found by the name of {login_info["character_name"]}!'.encode('utf-8'))
-                logging.info(e)
+            self.logged_in = LoginManager(data, self.connection, self.address).success
 
         data = self.connection.recv(self.buffer_size)
 

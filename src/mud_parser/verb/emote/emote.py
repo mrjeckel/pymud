@@ -145,3 +145,6 @@ class Emote(Verb):
             if word in adverb:
                 return adverb
         return None
+    
+class Laugh(Emote):
+    ...
