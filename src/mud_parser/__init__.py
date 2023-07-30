@@ -1,14 +1,7 @@
-import logging
-
 from inspect import isclass
 from pkgutil import iter_modules
 from pathlib import Path
 from importlib import import_module
-
-logging.basicConfig(
-    format='%(asctime)s %(levelname)-8s %(message)s',
-    level=logging.DEBUG,
-    datefmt='%Y-%m-%d %H:%M:%S')
 
 # iterate through the modules in the current package
 package_dir = Path(__file__).resolve().parent

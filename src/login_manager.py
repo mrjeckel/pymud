@@ -3,12 +3,6 @@ import logging
 
 from data.models import Character
 
-class LoginError(Exception):
-    pass
-
-class CharacterExists(Exception):
-    pass
-
 class LoginManager:
     def __init__(self, data, connection, address):
         self.success = False

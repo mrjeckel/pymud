@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import (MultipleResultsFound,
                                 NoResultFound)
 from config import ENGINE
-from login_manager import (LoginError,
+from exceptions import (LoginError,
                            CharacterExists)
 
 class Base(DeclarativeBase):

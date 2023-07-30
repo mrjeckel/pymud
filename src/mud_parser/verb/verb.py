@@ -1,4 +1,2 @@
-from abc import ABC
-
-class Verb(ABC):
+class Verb:
     ...

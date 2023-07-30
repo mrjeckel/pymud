@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from mud_parser.verb import Verb
+from mud_parser.verb.verb import Verb
 
 class Action(Verb, ABC):
     @staticmethod
@@ -11,7 +11,7 @@ class Action(Verb, ABC):
     
     @staticmethod
     @abstractmethod
-    def execute(noun_chunks, ins):
+    def execute(phrase: str):
         """
         """
         raise NotImplementedError('execute was not implemented!')
@@ -24,7 +24,7 @@ class Kill(Action):
 
     @staticmethod
     def execute(phrase: str):
-        pass
+        return 'Kill what?'
 
 class Look(Action):
     @staticmethod
@@ -34,7 +34,7 @@ class Look(Action):
 
     @staticmethod
     def execute(phrase: str):
-        pass
+        return 'You see nothing but darkness here in the void.'
 
 class Put(Action):
     @staticmethod
@@ -45,4 +45,4 @@ class Put(Action):
 
     @staticmethod
     def execute(phrase: str):
-        pass
+        return 'Put what?'
