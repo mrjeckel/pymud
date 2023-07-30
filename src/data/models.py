@@ -10,7 +10,7 @@ from sqlalchemy.orm import (DeclarativeBase,
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import (MultipleResultsFound,
                                 NoResultFound)
-from pymud import MudServer
+from config import ENGINE
 from exceptions import (LoginError,
                         CharacterExists)
 
@@ -68,17 +68,17 @@ class Character(Base):
 
     @classmethod
     def validate_account(cls, character, hash):
-        with Session(MudServer.engine) as session:
+        with Session(ENGINE) as session:
             try:
-                account_hash = session.query(Character.account_hash).where(Character.name == character).one()
+                account_hash = session.query(Character.account_hash).where(Character.name == character).one()[0]
             except (NoResultFound, MultipleResultsFound) as e:
                 logging.exception(e)
                 raise LoginError from e
-        return hash == account_hash
+        return hashlib.sha256(hash.encode('utf-8')).hexdigest() == account_hash
     
     @classmethod
     def create_character(cls, name, hash):
-        with Session(MudServer.engine) as session:
+        with Session(ENGINE) as session:
             try:
                 session.add(Character(name=name, account_hash=hash))
                 session.commit()

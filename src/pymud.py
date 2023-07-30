@@ -1,33 +1,19 @@
 #!/usr/bin/python3
-import os
 import socket
 import threading
 import logging
+import json
 
-import sqlalchemy as db
-
-HOST = '0.0.0.0' 
-PORT = 5000
-BUFFER_SIZE = 1024
-
-DB_HOST = os.environ.get('DB_HOST')
-DB_PORT = os.environ.get('DB_PORT')
-DB_NAME = os.environ.get('DB_NAME')
-DB_USER = os.environ.get('DB_USER')
-DB_PASSWORD = os.environ.get('DB_PASSWORD')
-
-DATABASE_ADDRESS = f'{DB_HOST}:{DB_PORT}/{DB_NAME}'
-DATABASE_URI = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DATABASE_ADDRESS}'
-
-logging.basicConfig(
-    format='%(asctime)s %(levelname)-8s %(message)s',
-    level=logging.DEBUG,
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
+from data.models import Character
+from exceptions import LoginError
+from config import (HOST,
+                    PORT,
+                    DATABASE_ADDRESS,
+                    BUFFER_SIZE,
+                    ENGINE)
 
 class MudServer:
-    engine = db.create_engine(DATABASE_URI)
-    
+    engine = ENGINE
     def __init__(self, host, port, buffer_size):
         logging.info(f'Connected to database at {DATABASE_ADDRESS}')
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -44,24 +30,38 @@ class MudThread(threading.Thread):
         self.connection = connection
         self.address = address
         self.buffer_size = buffer_size
+
+        self.logged_in = False
+
         super().__init__()
         self.start()
 
     def run(self):
         logging.info(f'Client connected: {self.address}')
 
-        logged_in = False
-        self.connection.send('Please enter character name:')
-        while not logged_in:
-            data = self.connection.recv(self.buffer_size)
-            # TODO: sqlalchemy query to find matching character
-            # TODO: sqlalchemy query to check matching password
+        if not self.logged_in:
+            # data = self.connection.recv(self.buffer_size)
+            data = b'{"character_name": "Rha", "account_hash": "1"}'
+            login_info = json.loads(data)
+
+            try:
+                if Character.validate_account(login_info['character_name'], login_info['account_hash']):
+                    self.connection.send(f'Welcome {login_info["character_name"]}!'.encode('utf-8'))
+                    logging.info(f'{login_info["character_name"]} succesfully authenticated!')
+                    self.logged_in = True
+                else:
+                    self.connection.send(f'Invalid login credentials!'.encode('utf-8'))
+                    logging.info(f'Invalid login: {login_info["character_name"]} - {self.address}')
+            except LoginError as e:
+                self.connection.send(f'No character found by the name of {login_info["character_name"]}!'.encode('utf-8'))
+                logging.info(e)
 
         data = self.connection.recv(self.buffer_size)
 
-        while data:
-            self.connection.send(data)
-            data = self.connection.recv(self.buffer_size)
+        if self.logged_in:
+            while data:
+                self.connection.send(data)
+                data = self.connection.recv(self.buffer_size)
         self.connection.close()
         logging.info(f'Client disconnected: {self.address}')
 
