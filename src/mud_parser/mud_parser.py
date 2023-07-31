@@ -1,11 +1,11 @@
 import logging
 import random
 
-from mud_parser.verb import ACTION_DICT
-from mud_parser.verb import EMOTE_DICT
-from mud_parser.phrase import Phrase
+from .verb import ACTION_DICT
+from .verb import EMOTE_DICT
+from .phrase import Phrase
 
-class Parser:
+class MudParser:
     PHRASE_ERROR = [
         'I\'m sorry, what?',
         'I don\'t understand what you want.',

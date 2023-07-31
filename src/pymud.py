@@ -4,7 +4,7 @@ import threading
 import logging
 
 from login_manager import LoginManager
-from mud_parser import MudParser
+#from mud_parser import MudParser
 from config import (HOST,
                     PORT,
                     DATABASE_ADDRESS,
@@ -48,7 +48,8 @@ class MudThread(threading.Thread):
 
         if self.logged_in:
             while data:
-                Parser.parse_data(data)
+                #Parser.parse_data(data)
+                self.connection.send(data)
                 data = self.connection.recv(self.buffer_size)
         self.connection.close()
         logging.info(f'Client disconnected: {self.address}')

@@ -2,8 +2,8 @@ import logging
 import spacy
 
 from typing import List, Tuple
-from mud_parser.verb import Emote, EMOTE_DICT
-from mud_parser.verb import ACTION_DICT
+from .verb import Emote, EMOTE_DICT
+from .verb import ACTION_DICT
 
 NLP = spacy.load("en_core_web_sm")
 
