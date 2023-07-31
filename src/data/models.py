@@ -58,6 +58,12 @@ class Mobile(MudObject):
                                long_desc=long_desc))
             session.commit()
 
+    @classmethod
+    def delete_mobile(cls, id):
+        with Session(ENGINE) as session:
+            session.query(Mobile).where(Mobile.id == id).delete()
+            session.commit()
+
 class MobileType(Base):
     __tablename__ = 'mobile_type'
     id: Mapped[int] = mapped_column(primary_key=True)
