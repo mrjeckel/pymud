@@ -1,4 +1,4 @@
-from mud_parser.verb.verb import Verb
+from .verb import Verb
 
 class Emote(Verb):
     ADVERBS = [

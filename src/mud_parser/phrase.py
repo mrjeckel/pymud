@@ -2,6 +2,7 @@ import logging
 import spacy
 
 from typing import List, Tuple
+from exceptions import UnknownVerb
 from .verb import Emote, EMOTE_DICT
 from .verb import ACTION_DICT
 
@@ -36,7 +37,7 @@ class Phrase:
             descriptors = [Emote.complete_adverb(doc[1].text)] if len(doc) > 1 else []
             Emote.validate_phrase_structure(noun_chunks, descriptors)
         else:
-            raise AssertionError("Unknown verb type!")
+            raise UnknownVerb
             
         return verb, ins, noun_chunks, descriptors
     

@@ -4,7 +4,7 @@ import threading
 import logging
 
 from login_manager import LoginManager
-#from mud_parser import MudParser
+from mud_parser import MudParser
 from config import (HOST,
                     PORT,
                     DATABASE_ADDRESS,
@@ -30,26 +30,22 @@ class MudThread(threading.Thread):
         self.address = address
         self.buffer_size = buffer_size
 
-        self.logged_in = False
-
         super().__init__()
         self.start()
 
     def run(self):
         logging.info(f'Client connected: {self.address}')
-
-        if not self.logged_in:
-            # TODO: send json on first message upon front-end connection
-            # data = self.connection.recv(self.buffer_size)
-            data = b'{"character_name": "Rha", "account_hash": "1"}'
-            self.logged_in = LoginManager(data, self.connection, self.address).success
+        # TODO: send json on first message upon front-end connection
+        # data = self.connection.recv(self.buffer_size)
+        data = b'{"character_name": "Rha", "account_hash": "1"}'
+        login_manager = LoginManager(data, self.connection, self.address)
 
         data = self.connection.recv(self.buffer_size)
 
-        if self.logged_in:
+        if login_manager.success:
             while data:
-                #Parser.parse_data(data)
-                self.connection.send(data)
+                response = MudParser.parse_data(data, login_manager.character_name)
+                self.connection.send(response)
                 data = self.connection.recv(self.buffer_size)
         self.connection.close()
         logging.info(f'Client disconnected: {self.address}')
