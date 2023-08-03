@@ -25,7 +25,8 @@ class Phrase:
         """
         doc = NLP(phrase)
         verb = doc[0].text
-        ins = [token.text for token in doc if token.pos_ == 'ADP']
+
+        ins = [token.text for token in doc[1:] if token.pos_ == 'ADP']
         descriptors = []
         noun_chunks = self._build_noun_chunks(doc)
 
@@ -46,7 +47,7 @@ class Phrase:
         Construct noun phrases with adjectives and nouns
         """
         noun_chunks = []
-        for chunk in doc.noun_chunks:
+        for chunk in doc[1:].noun_chunks:
             noun_chunk = [token.text for token in chunk if token.pos_ not in self.EXCLUDE_FROM_NOUN_CHUNKS]
             noun_chunks.append(' '.join(noun_chunk))
         return noun_chunks

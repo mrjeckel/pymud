@@ -17,7 +17,7 @@ class MudParser:
     ]
     
     @classmethod
-    def parse_data(cls, data, character):
+    def parse_data(cls, session, character, data):
         """
         """
         try:
@@ -32,7 +32,7 @@ class MudParser:
             return str(e).encode('utf-8')
         
         if phrase.is_action:
-            response = ACTION_DICT[phrase.verb].execute(phrase, character)
+            response = ACTION_DICT[phrase.verb].execute(session, character, phrase)
         elif phrase.is_emote:
-            response = EMOTE_DICT[phrase.verb].execute(phrase, character)
+            response = EMOTE_DICT[phrase.verb].execute(session, character, phrase)
         return response.encode('utf-8')

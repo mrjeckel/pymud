@@ -1,22 +1,21 @@
 import logging
 import hashlib
-from typing import Optional, List
-from sqlalchemy import ForeignKey, UniqueConstraint
+from typing import Optional
+from sqlalchemy import (ForeignKey,
+                        UniqueConstraint,
+                        select,
+                        update)
 from sqlalchemy.types import String
 from sqlalchemy.orm import (DeclarativeBase,
                             Mapped,
                             mapped_column,
-                            validates,
-                            sessionmaker,
-                            relationship)
+                            validates)
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import (MultipleResultsFound,
                                 NoResultFound)
-from config import ENGINE
 from exceptions import (LoginError,
-                           CharacterExists)
-
-Session = sessionmaker(ENGINE)
+                        CharacterExists,
+                        BadRoomConnection)
 
 class Base(DeclarativeBase):
     pass
@@ -50,33 +49,31 @@ class Mobile(MudObject):
     room_id: Mapped[int] = mapped_column(ForeignKey('room.id'))
 
     @classmethod
-    def create_mobile(cls, short_desc, mobile_type, room_id, long_desc=None):
-        with Session() as session:
-            mobile = Mobile(short_desc=short_desc,
-                            mobile_type=mobile_type,
-                            room_id=room_id,
-                            long_desc=long_desc)
-            mobile_id = Mobile.id
-            session.add(mobile)
-            session.commit()
-        return mobile_id
+    def create_mobile(cls, session, short_desc, mobile_type, room_id, long_desc=None):
+        mobile = Mobile(short_desc=short_desc,
+                        mobile_type=mobile_type,
+                        room_id=room_id,
+                        long_desc=long_desc)
+        session.add(mobile)
+        session.commit()
+        return mobile
 
     @classmethod
-    def delete_mobile(cls, id):
-        with Session() as session:
-            session.query(Mobile).where(Mobile.id == id).delete()
-            session.commit()
+    def delete_mobile(cls, session, id):
+        session.execute(
+            select(Mobile).where(Mobile.id == id)
+            ).delete()
+        session.commit()
 
 class MobileType(Base):
     __tablename__ = 'mobile_type'
     name: Mapped[str] = mapped_column(String(32), primary_key=True)
 
     @classmethod
-    def add_type(cls, type_name):
-        with Session() as session:
-            mobile_type = MobileType(name=type_name)
-            session.add(mobile_type)
-            session.commit()
+    def add_type(cls, session, type_name):
+        mobile_type = MobileType(name=type_name)
+        session.add(mobile_type)
+        session.commit()
 
 class Direction(Base):
     __tablename__ = 'direction'
@@ -84,14 +81,13 @@ class Direction(Base):
     inverse: Mapped[str] = mapped_column(String(10))
 
     @classmethod
-    def create_direction(cls, direction, inverse):
-        with Session() as session:
-            directions = [
-                Direction(name=direction, inverse=inverse),
-                Direction(name=inverse, inverse=direction)
-            ]
-            session.add_all(directions)
-            session.commit()
+    def create_direction(cls, session, direction, inverse):
+        directions = [
+            Direction(name=direction, inverse=inverse),
+            Direction(name=inverse, inverse=direction)
+        ]
+        session.add_all(directions)
+        session.commit()
 
 class Room(MudObject):
     __tablename__ = 'room'
@@ -99,20 +95,24 @@ class Room(MudObject):
     desc: Mapped[str] = mapped_column(String(255))
 
     @classmethod
-    def create_room(cls, desc):
-        with Session() as session:
-            room = Room(desc=desc)
-            session.add(room)
-            session.flush()
-            room_id = room.id
-            session.commit()
-        return room_id
+    def create_room(cls, session, desc):
+        room = Room(desc=desc)
+        session.add(room)
+        session.commit()
+        return room
     
     @classmethod
-    def get_exits(cls, room_id):
-        with Session() as session:
-            result = session.query(RoomConnection.direction).where(Room.id == room_id).all()
-            return tuple(exit[0] for exit in result)
+    def get_exits(cls, session, room_id):
+        result = session.execute(
+            select(RoomConnection.direction).where(RoomConnection.room_id == room_id)
+            ).scalars().all()
+        return result
+    
+    @classmethod
+    def get_desc(cls, session, character):
+        return session.execute(
+            select(Room.desc).where(Room.id == character.room_id)
+            ).scalar_one()
 
 class RoomConnection(Base):
     __tablename__ = 'room_connection'
@@ -124,34 +124,30 @@ class RoomConnection(Base):
     UniqueConstraint('room_id', 'destination_id')
 
     @classmethod
-    def create_bidirectional_connection(cls, room_id, destination_id, direction):
-        with Session() as session:
-            inverse = session.query(Direction.inverse).where(Direction.name == direction).one()[0]
-            connections = [ 
-                RoomConnection(room_id=room_id,
-                               destination_id=destination_id,
-                               direction=direction),
-                RoomConnection(room_id=destination_id,
-                               destination_id=room_id,
-                               direction=inverse)
-            ]
-            session.add_all(connections)
-            session.flush()
-            connection_ids = [connections[0].id, connections[1].id]
-            session.commit()
-        return connection_ids
+    def create_bidirectional_connection(cls, session, room, destination, direction):
+        inverse = session.execute(
+            select(Direction.inverse).where(Direction.name == direction)
+            ).scalar_one()
+        connections = [ 
+            RoomConnection(room_id=room.id,
+                            destination_id=destination.id,
+                            direction=direction),
+            RoomConnection(room_id=destination.id,
+                            destination_id=room.id,
+                            direction=inverse)
+        ]
+        session.add_all(connections)
+        session.commit()
+        return connections
     
     @classmethod
-    def create_unidirectional_connection(cls, room_id, destination_id, direction):
-        with Session() as session:
-            connection = RoomConnection(room_id=room_id,
-                                        destination_id=destination_id,
-                                        direction=direction)
-            session.add(connection)
-            session.flush()
-            connection_id = connection.id
-            session.commit()
-        return connection_id
+    def create_unidirectional_connection(cls, session, room, destination, direction):
+        connection = RoomConnection(room_id=room.id,
+                                    destination_id=destination.id,
+                                    direction=direction)
+        session.add(connection)
+        session.commit()
+        return connection
 
 class Character(MudObject):
     __tablename__ = 'character'
@@ -161,29 +157,52 @@ class Character(MudObject):
     room_id: Mapped[int] = mapped_column(ForeignKey('room.id'))
 
     @classmethod
-    def validate_account(cls, character, hash):
-        with Session() as session:
-            try:
-                account_hash = session.query(Character.account_hash).where(Character.name == character).one()[0]
-            except (NoResultFound, MultipleResultsFound) as e:
-                logging.exception(e)
-                raise LoginError from e
+    def validate_account(cls, session, character, hash):
+        try:
+            account_hash = session.execute(
+                select(Character.account_hash).where(Character.name == character)
+                ).scalar_one()
+        except (NoResultFound, MultipleResultsFound) as e:
+            logging.exception(e)
+            raise LoginError from e
         return hashlib.sha256(hash.encode('utf-8')).hexdigest() == account_hash
     
     @classmethod
-    def create_character(cls, name, hash, room=1):
-        with Session() as session:
-            try:
-                character = Character(name=name, account_hash=hash, room_id=room)
-                session.add(character)
-                session.flush()
-                character_id = character.id
-                session.commit()
-            except IntegrityError as e:
-                logging.exception(e)
-                raise CharacterExists from e
-        return character_id
+    def create_character(cls, session, name, hash, room=1):
+        try:
+            character = Character(name=name, account_hash=hash, room_id=room)
+            session.add(character)
+            session.commit()
+        except IntegrityError as e:
+            logging.exception(e)
+            raise CharacterExists from e
+        return character
+    
+    @classmethod
+    def get_character(cls, session, name):
+        return session.execute(
+            select(Character).where(Character.name == name)
+            ).scalar_one()
+    
+    @classmethod
+    def move(self, session, character, direction):
+        try:
+            if direction in session.execute(
+                select(Room).where(Room.id == character.room_id)
+                ).scalar_one().get_exits(session, character.room_id):
+                    new_room = session.execute(
+                        select(RoomConnection.destination_id).where(
+                            (RoomConnection.room_id == character.room_id) &
+                            (RoomConnection.direction == direction)
+                        )).scalar_one()
+                    session.execute(
+                        update(Character).where(Character.id == character.id).values(room_id=new_room)
+                        )
+                    session.commit()
+        except (NoResultFound, MultipleResultsFound) as e:
+            logging.exception(e)
+            raise BadRoomConnection from e
         
     @validates('account_hash')
     def _hash_password(self, _, hash):
-        return hashlib.sha256(hash.encode('utf-8')).hexdigest()
+        return hashlib.sha256(str(hash).encode('utf-8')).hexdigest()

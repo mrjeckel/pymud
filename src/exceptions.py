@@ -9,3 +9,6 @@ class UnknownVerb(Exception):
 
 class BadArguments(Exception):
     pass
+
+class BadRoomConnection(Exception):
+    pass
