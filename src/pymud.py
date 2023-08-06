@@ -54,6 +54,7 @@ class MudThread(threading.Thread):
         if login_manager.success:
             while data:
                 with self.db_session() as session:
+                    login_manager.refresh()
                     response = MudParser.parse_data(session, login_manager.character, data)
                 self.connection.send(response)
                 data = self.connection.recv(self.buffer_size)

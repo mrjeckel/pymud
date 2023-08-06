@@ -1,4 +1,4 @@
-from .verb import Verb
+from mud_parser.verb import Verb
 
 class Emote(Verb):
     ADVERBS = [
@@ -144,6 +144,7 @@ class Emote(Verb):
             if word in adverb:
                 return adverb
         return None
+    
     
 class Laugh(Emote):
     ...

@@ -103,10 +103,9 @@ class Room(MudObject):
     
     @classmethod
     def get_exits(cls, session, room_id):
-        result = session.execute(
+        return session.execute(
             select(RoomConnection.direction).where(RoomConnection.room_id == room_id)
             ).scalars().all()
-        return result
     
     @classmethod
     def get_desc(cls, session, character):
@@ -185,7 +184,7 @@ class Character(MudObject):
             ).scalar_one()
     
     @classmethod
-    def move(self, session, character, direction):
+    def move(cls, session, character, direction):
         try:
             if direction in session.execute(
                 select(Room).where(Room.id == character.room_id)
@@ -202,6 +201,12 @@ class Character(MudObject):
         except (NoResultFound, MultipleResultsFound) as e:
             logging.exception(e)
             raise BadRoomConnection from e
+        
+    @classmethod
+    def refresh(cls, session, character):
+        return session.execute(
+            select(Character).where(Character.id == character.id).scalar_one()
+            )
         
     @validates('account_hash')
     def _hash_password(self, _, hash):

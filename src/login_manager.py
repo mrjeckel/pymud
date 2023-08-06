@@ -21,3 +21,6 @@ class LoginManager:
         except LoginError as e:
             connection.send(f'No character found by the name of {login_info["character_name"]}!\r\n'.encode('utf-8'))
             logging.info(e)
+
+    def refresh(self, session):
+        self.character = Character.refresh(session, self.character)
