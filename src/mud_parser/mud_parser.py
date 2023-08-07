@@ -87,10 +87,10 @@ class MudParser:
     Turn a client string into an executable command
     """
     PHRASE_ERROR = [
-        'I\'m sorry, what?\r\n',
-        'I don\'t understand what you want.\r\n',
-        'Come again?\r\n',
-        'Please try to be more coherent.\r\n'
+        'I\'m sorry, what?',
+        'I don\'t understand what you want.',
+        'Come again?',
+        'Please try to be more coherent.'
     ]
     
     @classmethod
@@ -100,10 +100,10 @@ class MudParser:
         try:
             input = data.decode('utf-8').strip().lower()
             if not input:
-                return b'\n'
+                return b''.encode('utf-8')
             phrase = Phrase(input)
         except UnknownVerb:
-            logging.info(f'Unable to parse data: {input} - {character}')
+            logging.debug(f'Unable to parse data: {input} - {character}')
             return random.choice(cls.PHRASE_ERROR).encode('utf-8')
         except BadArguments as e:
             return str(e).encode('utf-8')

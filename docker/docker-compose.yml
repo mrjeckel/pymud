@@ -29,6 +29,7 @@ services:
       
   db:
     image: postgres:15.3
+    command: "postgres -c log_statement=all"
     restart: always
     environment:
       - POSTGRES_DB=mud

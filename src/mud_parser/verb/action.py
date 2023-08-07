@@ -32,23 +32,23 @@ class Kill(Action):
     @staticmethod
     def validate_phrase_structure(noun_chunks, ins):
         if not noun_chunks:
-            raise BadArguments('Kill what?\r\n')
+            raise BadArguments('Kill what?')
         if ins:
-            raise BadArguments('You can\'t reach that.\r\n')
+            raise BadArguments('You can\'t reach that.')
         if len(noun_chunks) > 1:
-            raise BadArguments('One thing at a time, bucko.\r\n')
+            raise BadArguments('One thing at a time, bucko.')
 
     @staticmethod
     def execute(session: Session, character: Character, phrase: Phrase):
-        return 'Kill what?\r\n'
+        return 'Kill what?'
 
 class Look(Action):
     @staticmethod
     def validate_phrase_structure(noun_chunks, ins):
         if len(ins) > 1:
-            raise BadArguments('You don\'t hage x-ray vision! Try taking stuff out first.\r\n')
+            raise BadArguments('You don\'t hage x-ray vision! Try taking stuff out first.')
         if len(noun_chunks) > 1:
-            raise BadArguments('You don\'t have enough eyes for that!\r\n')
+            raise BadArguments('You don\'t have enough eyes for that!')
 
     @staticmethod
     def execute(session: Session, character: Character, phrase: Phrase):
@@ -62,19 +62,19 @@ class Put(Action):
     @staticmethod
     def validate_phrase_structure(noun_chunks, ins):
         if not noun_chunks:
-            raise BadArguments('Put what?\r\n')
+            raise BadArguments('Put what?')
         if not ins or len(ins) != len(noun_chunks) - 1:
-            raise BadArguments(f'Put {noun_chunks[0]} where?\r\n')
+            raise BadArguments(f'Put {noun_chunks[0]} where?')
 
     @staticmethod
     def execute(session: Session, character: Character, phrase: Phrase):
-        return 'Put what?\r\n'
+        return 'Put what?'
 
 class Direction(Action):
     @staticmethod
     def validate_phrase_structure(noun_chunks, ins):
         if noun_chunks or ins:
-            raise BadArguments('Go where?\r\n')
+            raise BadArguments('Go where?')
         
     @staticmethod
     def execute(session: Session, character: Character, phrase: Phrase):
@@ -86,7 +86,7 @@ class Direction(Action):
             Character.move(session, character, direction)
             return Room.get_desc(session, character)
         except BadRoomConnection:
-            return 'There\'s no exit in that direction.\r\n'
+            return 'There\'s no exit in that direction.'
     
 class North(Direction):
     pass

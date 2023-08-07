@@ -32,6 +32,8 @@ class MudServer:
             MudThread(connection, address, buffer_size, db_session)
 
 class MudThread(threading.Thread):
+    NEWLINE = b'\r\n'
+
     def __init__(self, connection, address, buffer_size, db_session):
         self.connection = connection
         self.address = address
@@ -49,15 +51,14 @@ class MudThread(threading.Thread):
         with self.db_session() as session:
             login_manager = LoginManager(session, data, self.connection, self.address)
 
-        data = self.connection.recv(self.buffer_size)
-
         if login_manager.success:
             while data:
-                with self.db_session() as session:
-                    login_manager.refresh(session)
-                    response = MudParser.parse_data(session, login_manager.character, data)
-                self.connection.send(response)
-                data = self.connection.recv(self.buffer_size)
+                if data.strip():
+                    with self.db_session() as session:
+                        login_manager.refresh(session)
+                        response = MudParser.parse_data(session, login_manager.character, data)
+                    self.connection.send(response + self.NEWLINE)
+                    data = self.connection.recv(self.buffer_size)
         self.connection.close()
         logging.info(f'Client disconnected: {self.address}')
 

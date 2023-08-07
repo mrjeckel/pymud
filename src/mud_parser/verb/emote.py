@@ -1,4 +1,8 @@
+from typing import TYPE_CHECKING
 from mud_parser.verb import Verb
+
+if TYPE_CHECKING:
+    from mud_parser import Phrase
 
 class Emote(Verb):
     ADVERBS = [
@@ -131,6 +135,9 @@ class Emote(Verb):
         'wisely'
     ]
 
+    BASE_STRING = None
+    MODIFIED_STRING = None
+
     @staticmethod
     def validate_phrase_structure(noun_chunks, descriptors):
         if noun_chunks:
@@ -140,11 +147,21 @@ class Emote(Verb):
 
     @classmethod
     def complete_adverb(cls, word):
-        for adverb in cls.ADVERBS:
-            if word in adverb:
-                return adverb
+        if len(word) >= 3:
+            for adverb in cls.ADVERBS:
+                if word in adverb:
+                    return adverb
         return None
+    
+    @classmethod
+    def execute(cls, phrase: Phrase):
+        descriptor = phrase.descriptors[0] if phrase.descriptors else None
+        if descriptor:
+            return cls.MODIFIED_STRING.format(descriptor)
+        else:
+            return cls.BASE_STRING
     
     
 class Laugh(Emote):
-    ...
+    BASE_STRING = 'You laugh out loud!'
+    MODIFIED_STRING = 'You laugh {}!'
