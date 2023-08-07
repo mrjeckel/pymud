@@ -75,16 +75,39 @@ class Direction(Action):
     def validate_phrase_structure(noun_chunks, ins):
         if noun_chunks or ins:
             raise BadArguments('Go where?\r\n')
+        
+    @staticmethod
+    def execute(session: Session, character: Character, phrase: Phrase):
+        return Direction.execute_direction(session, character, phrase.verb)
 
     @staticmethod
-    def execute(session: Session, character: Character, direction: str):
+    def execute_direction(session: Session, character: Character, direction: str):
         try:
             Character.move(session, character, direction)
             return Room.get_desc(session, character)
         except BadRoomConnection:
-            return 'There\'s no exit in that direction.'
+            return 'There\'s no exit in that direction.\r\n'
     
+class North(Direction):
+    pass
+
 class East(Direction):
-    @staticmethod
-    def execute(session: Session, character: Character, phrase: Phrase):
-        Direction.execute(session, character, phrase.verb)
+    pass
+
+class NorthEast(Direction):
+    pass
+
+class NorthWest(Direction):
+    pass
+
+class South(Direction):
+    pass
+
+class West(Direction):
+    pass
+
+class SouthEast(Direction):
+    pass
+
+class SouthWest(Direction):
+    pass

@@ -186,27 +186,23 @@ class Character(MudObject):
     @classmethod
     def move(cls, session, character, direction):
         try:
-            if direction in session.execute(
-                select(Room).where(Room.id == character.room_id)
-                ).scalar_one().get_exits(session, character.room_id):
-                    new_room = session.execute(
-                        select(RoomConnection.destination_id).where(
-                            (RoomConnection.room_id == character.room_id) &
-                            (RoomConnection.direction == direction)
-                        )).scalar_one()
-                    session.execute(
-                        update(Character).where(Character.id == character.id).values(room_id=new_room)
-                        )
-                    session.commit()
+            new_room = session.execute(
+                select(RoomConnection.destination_id).where(
+                    (RoomConnection.room_id == character.room_id) &
+                    (RoomConnection.direction == direction)
+                )).scalar_one()
+            session.execute(
+                update(Character).where(Character.id == character.id).values(room_id=new_room)
+                )
+            session.commit()
         except (NoResultFound, MultipleResultsFound) as e:
-            logging.exception(e)
             raise BadRoomConnection from e
         
     @classmethod
     def refresh(cls, session, character):
         return session.execute(
-            select(Character).where(Character.id == character.id).scalar_one()
-            )
+            select(Character).where(Character.id == character.id)
+        ).scalar_one()
         
     @validates('account_hash')
     def _hash_password(self, _, hash):
