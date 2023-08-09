@@ -9,7 +9,7 @@ class Verb:
         for subclass in cls.__subclasses__():
             if subclass.__subclasses__():
                 class_dict.update(subclass.get_subclass_dict())
-            else:
+            if getattr(subclass, f'_{subclass.__name__}__ABSTRACT', False) is False:
                 class_dict.update({subclass.__name__.lower(): subclass})
 
         return class_dict

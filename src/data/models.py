@@ -112,6 +112,12 @@ class Room(MudObject):
         return session.execute(
             select(Room.desc).where(Room.id == character.room_id)
             ).scalar_one()
+    
+    @classmethod
+    def get_occupants(cls, session, room_id):
+        return session.execute(
+            select(Character.id).where(Character.room_id == room_id)
+            ).scalars().all()
 
 class RoomConnection(Base):
     __tablename__ = 'room_connection'

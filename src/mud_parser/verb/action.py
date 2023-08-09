@@ -3,7 +3,7 @@ from sqlalchemy.orm.session import Session
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Union, Callable
 
-from exceptions import BadArguments, BadRoomConnection
+from exceptions import BadArguments
 from mud_parser.verb import Verb
 
 from data.models import Room, Character
@@ -11,7 +11,9 @@ from data.models import Room, Character
 if TYPE_CHECKING:
     from mud_parser import Phrase
 
-class Action(Verb, ABC):
+class Action(ABC, Verb):
+    __ABSTRACT = True
+    
     @staticmethod
     @abstractmethod
     def validate_phrase_structure(noun_chunks, ins):
@@ -69,45 +71,3 @@ class Put(Action):
     @staticmethod
     def execute(session: Session, character: Character, phrase: Phrase):
         return 'Put what?'
-
-class Direction(Action):
-    @staticmethod
-    def validate_phrase_structure(noun_chunks, ins):
-        if noun_chunks or ins:
-            raise BadArguments('Go where?')
-        
-    @staticmethod
-    def execute(session: Session, character: Character, phrase: Phrase):
-        return Direction.execute_direction(session, character, phrase.verb)
-
-    @staticmethod
-    def execute_direction(session: Session, character: Character, direction: str):
-        try:
-            Character.move(session, character, direction)
-            return Room.get_desc(session, character)
-        except BadRoomConnection:
-            return 'There\'s no exit in that direction.'
-    
-class North(Direction):
-    pass
-
-class East(Direction):
-    pass
-
-class NorthEast(Direction):
-    pass
-
-class NorthWest(Direction):
-    pass
-
-class South(Direction):
-    pass
-
-class West(Direction):
-    pass
-
-class SouthEast(Direction):
-    pass
-
-class SouthWest(Direction):
-    pass

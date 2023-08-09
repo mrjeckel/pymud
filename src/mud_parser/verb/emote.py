@@ -1,10 +1,17 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING
+
+from sqlalchemy.orm.session import Session
 from mud_parser.verb import Verb
+
+from data.models import Character
 
 if TYPE_CHECKING:
     from mud_parser import Phrase
 
 class Emote(Verb):
+    __ABSTRACT = True
+
     ADVERBS = [
         'accidentally',
         'angrily',
@@ -154,7 +161,7 @@ class Emote(Verb):
         return None
     
     @classmethod
-    def execute(cls, phrase: Phrase):
+    def execute(cls, session: Session, character: Character, phrase: Phrase):
         descriptor = phrase.descriptors[0] if phrase.descriptors else None
         if descriptor:
             return cls.MODIFIED_STRING.format(descriptor)
