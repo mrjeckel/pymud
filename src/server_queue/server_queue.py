@@ -16,7 +16,7 @@ class Event:
         self.timestamp = timestamp if timestamp else time.time()
         self.room_id = room_id
 
-class ServerQueue:
+class EventQueue:
     """
     Event queue for passing messages to unlinked connections
     """
@@ -45,11 +45,15 @@ class ServerQueue:
         event_time = self.peek_time()
         while event_time <= time.time():
             event = self.pop_event()
-            target_ids = Room.get_occupants(session, event.room_id)
-            for id in target_ids:
-                try:
-                    authenticated_client_threads[id].send_message(event.message)
-                except KeyError as e:
-                    logging.info(e)
+            if event.room_id:
+                target_ids = Room.get_occupants(session, event.room_id)
+                for id in target_ids:
+                    try:
+                        authenticated_client_threads[id].send_message(event.message)
+                    except KeyError as e:
+                        logging.info(e)
+            else:
+                for thread in authenticated_client_threads.values():
+                    thread.send_message(event.message)
             event_time = self.peek_time()
             

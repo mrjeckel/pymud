@@ -13,7 +13,7 @@ class LoginManager:
 
         try:
             if Character.validate_account(session, login_info['character_name'], login_info['account_hash']):
-                send_callback(f'Welcome {login_info["character_name"]}'.encode('utf-8'))
+                send_callback(f'Welcome {login_info["character_name"]}!'.encode('utf-8'))
                 logging.info(f'{login_info["character_name"]} succesfully authenticated - {address}')
                 self.success = True
                 self.character = Character.get_character(session, login_info['character_name'])

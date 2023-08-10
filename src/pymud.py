@@ -3,11 +3,12 @@ import socket
 import threading
 import logging
 import copy
+import sched
 
 from sqlalchemy.orm import scoped_session, sessionmaker
 from login_manager import LoginManager
 from mud_parser import MudParser
-from server_queue import ServerQueue
+from server_queue import EventQueue
 from config import (HOST,
                     PORT,
                     DATABASE_ADDRESS,
@@ -20,37 +21,54 @@ class MudServer:
     """
     engine = ENGINE
     def __init__(self, host, port, buffer_size):
-        db_session = scoped_session(
+        self.db_session = scoped_session(
             sessionmaker(
                 autoflush=True,
                 bind=ENGINE
             )
         )
         logging.info(f'Connected to database at {DATABASE_ADDRESS}')
-        mud_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        mud_socket.bind((host, port))
-        mud_socket.listen()
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.bind((host, port))
+        self.socket.listen()
         logging.info(f'Server started at {HOST}:{PORT}')
 
-        server_queue = ServerQueue()
-        unauthenticated_client_threads = []
-        authenticated_client_threads = {}
-        while True:
-            connection, address = mud_socket.accept()
-            unauthenticated_client_threads.append(ClientThread(
-                connection,
-                address,
-                buffer_size,
-                db_session,
-                server_queue))
-            # TODO: we don't necesarrily want to throttle any of this; it may work better on a timer
-            # TODO: we can also implement a pseudo-scheduler
-            for thread in copy.copy(unauthenticated_client_threads):
-                if thread.character_id:
-                    authenticated_client_threads.update({thread.character_id: thread})
-                    unauthenticated_client_threads.remove(thread)
-            with db_session() as session:
-                server_queue.execute_events(session, authenticated_client_threads)
+        self.buffer_size = buffer_size
+        self.event_queue = EventQueue()
+        self.unauthenticated_client_threads = []
+        self.authenticated_client_threads = {}
+        self.scheduler = sched.scheduler()
+
+        self.scheduler.enter(1, 1, self._accept_connections)
+        self.scheduler.enter(2, 2, self._refresh_threads)
+        self.scheduler.run()
+
+    def _accept_connections(self):
+        """
+        Accept incoming connections and append to list
+        """
+        connection, address = self.socket.accept()
+        self.unauthenticated_client_threads.append(ClientThread(
+            connection,
+            address,
+            self.buffer_size,
+            self.db_session,
+            self.event_queue))
+
+    def _refresh_threads(self):
+        """
+        Mark newly authenticated threads and remove old threads
+        """
+        for thread in copy.copy(self.unauthenticated_client_threads):
+            if thread.character_id:
+                self.authenticated_client_threads.update({thread.character_id: thread})
+                self.unauthenticated_client_threads.remove(thread)
+        for character_id, thread in copy.copy(self.authenticated_client_threads).items():
+            if not thread.is_alive():
+                self.authenticated_client_threads.pop(character_id)
+            
+        with self.db_session() as session:
+            self.event_queue.execute_events(session, self.authenticated_client_threads)
 
 
 class ClientThread(threading.Thread):
@@ -59,12 +77,12 @@ class ClientThread(threading.Thread):
     """
     NEWLINE = b'\r\n'
 
-    def __init__(self, connection, address, buffer_size, db_session, server_queue):
+    def __init__(self, connection, address, buffer_size, db_session, event_queue):
         self.connection = connection
         self.address = address
         self.buffer_size = buffer_size
         self.db_session = db_session
-        self.server_queue = server_queue
+        self.server_queue = event_queue
         self.character_id = None
 
         super().__init__()
@@ -80,7 +98,7 @@ class ClientThread(threading.Thread):
             self.character_id = login_manager.character.id
 
         if login_manager.success:
-            data = b'\r\n'
+            data = b'look\r\n'
             while data:
                 logging.info(data)
                 if data.strip():
