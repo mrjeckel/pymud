@@ -1,1 +1,1 @@
-from .server_queue import EventQueue
+from .event_queue import EventQueue

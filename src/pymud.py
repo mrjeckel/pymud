@@ -78,8 +78,6 @@ class ClientThread(threading.Thread):
     """
     Thread class to manage individual client connections
     """
-    NEWLINE = b'\r\n'
-
     def __init__(self, connection, address, buffer_size, db_session, event_queue):
         self.connection = connection
         self.address = address
@@ -108,13 +106,13 @@ class ClientThread(threading.Thread):
                     with self.db_session() as session:
                         login_manager.refresh(session)
                         response = MudParser.parse_data(session, login_manager.character, data)
-                    self.send_message(response)
+                    self.send_message(response.message_i)
                 data = self.connection.recv(self.buffer_size)
         self.connection.close()
         logging.info(f'Client disconnected: {self.address}')
 
     def send_message(self, message: str):
-        self.connection.send(message + self.NEWLINE)
+        self.connection.send(MudParser.format_newline(message))
 
 if __name__ == '__main__':
     MudServer(HOST, PORT, BUFFER_SIZE)

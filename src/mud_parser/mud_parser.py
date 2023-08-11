@@ -15,13 +15,15 @@ NLP = spacy.load("en_core_web_sm")
 
 class Phrase:
     """
-    Encapsulates a command sent from a client
+    Transforms a client string into an actionable object
     """
     EXCLUDE_FROM_NOUN_CHUNKS = ['DET']
 
-    def __init__(self, phrase: str, room_id: int):
+    def __init__(self, session: Session, phrase: str, room_id: int):
         self.is_emote = False
         self.is_action = False
+        self.session = session
+        self.room_id = room_id
         self.verb, self.ins, self.noun_chunks, self.descriptors = self._parse(phrase)
 
     def _parse(self, phrase: str) -> Tuple[str, List[str], List[str]]:
@@ -30,6 +32,10 @@ class Phrase:
         """
         doc = NLP(phrase)
         verb = doc[0].text
+        target = self._find_target(doc)
+
+        if target:
+            doc = NLP(doc[:-1].text)
 
         ins = [token.text for token in doc[1:] if token.pos_ == 'ADP']
         descriptors = []
@@ -57,12 +63,18 @@ class Phrase:
             noun_chunks.append(' '.join(noun_chunk))
         return noun_chunks
     
-    def _find_target(self, session: Session, doc: spacy.tokens.doc.Doc, room_id: int) -> str:
+    def _find_target(self, doc: spacy.tokens.doc.Doc) -> str:
         """
         Matches the last word in a doc with short_desc of a MudObject subclass
         """
-        Room.match_short_desc(session, doc[-1], room_id)
-        # TODO: this needs to be smarter
+        try:
+            last_chunk = list(doc.noun_chunks)[-1].text
+        except IndexError:
+            return None
+        else:
+            if doc[-1].text in last_chunk:
+                return Room.match_short_desc(self.session, doc[-1], self.room_id)[0]
+        return None
     
     def __iter__(self):
         """
@@ -96,6 +108,7 @@ class MudParser:
     """
     Turn a client string into an executable command
     """
+    NEWLINE = b'\r\n'
     PHRASE_ERROR = [
         'I\'m sorry, what?',
         'I don\'t understand what you want.',
@@ -106,14 +119,15 @@ class MudParser:
     @classmethod
     def parse_data(cls, session: Session, character: Character, data: str):
         """
+        Invoke a verb and format the response
         """
         try:
             input = data.decode('utf-8').strip().lower()
             if not input:
                 return b''.encode('utf-8')
-            phrase = Phrase(input, character.room_id)
+            phrase = Phrase(session, input, character.room_id)
         except UnknownVerb:
-            logging.debug(f'Unable to parse data: {input} - {character}')
+            logging.debug(f'Unable to parse data: {input} - {character.name}')
             return random.choice(cls.PHRASE_ERROR).encode('utf-8')
         except BadArguments as e:
             return str(e).encode('utf-8')
@@ -122,4 +136,12 @@ class MudParser:
             response = ACTION_DICT[phrase.verb].execute(session, character, phrase)
         elif phrase.is_emote:
             response = EMOTE_DICT[phrase.verb].execute(session, character, phrase)
-        return response.encode('utf-8')
+
+        return response
+    
+    @classmethod
+    def format_newline(cls, message: bytes):
+        newline_char = slice(len(message) - len(cls.NEWLINE), len(message))
+        if message[newline_char] != cls.NEWLINE:
+            return message + cls.NEWLINE
+        return message

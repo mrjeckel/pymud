@@ -25,4 +25,4 @@ class LoginManager:
             logging.info(e)
 
     def refresh(self, session):
-        self.character = Character.refresh(session, self.character)
+        self.character = Character.refresh(session, self.character.id)

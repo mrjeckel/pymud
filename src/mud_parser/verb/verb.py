@@ -1,3 +1,4 @@
+from typing import Union, Tuple
 from exceptions import BadResponse
 
 class Verb:
@@ -27,9 +28,9 @@ class VerbResponse:
                  target_id: int = None,
                  message_they: str = None,
                  room_id: int = None):
-        self.message_i = message_i
-        self.message_you = message_you
-        self.message_they = message_they
+        self.message_i = self._parse(message_i)
+        self.message_you = self._parse(message_you)
+        self.message_they = self._parse(message_they)
         self.character_id = character_id
         self.target_id = target_id
         self.room_id = room_id
@@ -41,5 +42,16 @@ class VerbResponse:
             raise BadResponse("Either set both response.message_i and response.character_id, or leave both unset")
         elif (self.message_you is not None) != (self.target_id is not None):
             raise BadResponse("Either set both response.message_you and response.target_id, or leave both unset")
-        elif self.message_they is None:
+        elif (self.message_they is None) == (self.message_i is None) == (self.message_you is None):
             raise BadResponse("response.message_they must be set for global and/or room messaging")
+        
+    def _parse(self, message: Union[Tuple[str], str]) -> str:
+        """
+        Converts a tuple into a multiline message
+        """
+        try:
+            if isinstance(message, tuple):
+                return b'\r\n'.join(message.encode('utf-8'))
+            return message.encode('utf-8')
+        except AttributeError:
+            return None
