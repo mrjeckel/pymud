@@ -23,14 +23,17 @@ class Base(DeclarativeBase):
 class MudObject(Base):
     __tablename__ = 'mud_object'
     id: Mapped[int] = mapped_column(primary_key=True)
+    short_desc: Mapped[str] = mapped_column(String(32), nullable=False)
+    long_desc: Mapped[Optional[str]] = mapped_column(String(255))
+    parent: Mapped[int] = mapped_column(ForeignKey('mud_object.id'))
 
 class Item(MudObject):
     __tablename__ = 'item'
     id: Mapped[int] = mapped_column(ForeignKey('mud_object.id'), primary_key=True)
-    short_desc: Mapped[str] = mapped_column(String(32), nullable=False)
-    long_desc: Mapped[Optional[str]] = mapped_column(String(255))
+    short_desc: Mapped[str] = mapped_column(ForeignKey('mud_object.short_desc'))
+    long_desc: Mapped[str] = mapped_column(ForeignKey('mud_object.long_desc'))
     item_type: Mapped[int] = mapped_column(ForeignKey('item_type.name'))
-    parent: Mapped[int] = mapped_column(ForeignKey('mud_object.id'))
+    parent: Mapped[int] = mapped_column(ForeignKey('mud_object.parent'))
 
     __mapper_args__ = {
         'inherit_condition': (id == MudObject.id)
@@ -43,10 +46,10 @@ class ItemType(Base):
 class Mobile(MudObject):
     __tablename__ = 'mobile'
     id: Mapped[int] = mapped_column(ForeignKey('mud_object.id'), primary_key=True)
-    short_desc: Mapped[str] = mapped_column(String(32), nullable=False)
-    long_desc: Mapped[Optional[str]] = mapped_column(String(255))
+    short_desc: Mapped[str] = mapped_column(ForeignKey('mud_object.short_desc'))
+    long_desc: Mapped[str] = mapped_column(ForeignKey('mud_object.long_desc'))
     mobile_type: Mapped[int] = mapped_column(ForeignKey('mobile_type.name'))
-    room_id: Mapped[int] = mapped_column(ForeignKey('room.id'))
+    room_id: Mapped[int] = mapped_column(ForeignKey('mud_object.parent'))
 
     @classmethod
     def create_mobile(cls, session, short_desc, mobile_type, room_id, long_desc=None):
@@ -126,7 +129,15 @@ class Room(MudObject):
                 (Character.name == character_name) &
                 (Character.room_id == room_id))
             ).scalar_one()
-
+    
+    @classmethod
+    def match_short_desc(cls, session, short_desc, room_id):
+        return session.execute(
+            select(MudObject.id).where(
+                (MudObject.short_desc.contains(short_desc)) &
+                (MudObject.parent == room_id))
+            ).scalars.all()
+    
 
 class RoomConnection(Base):
     __tablename__ = 'room_connection'
@@ -168,7 +179,9 @@ class Character(MudObject):
     id: Mapped[int] = mapped_column(ForeignKey('mud_object.id'), primary_key=True)
     name: Mapped[str] = mapped_column(String(16), unique=True)
     account_hash: Mapped[str] = mapped_column(String(64))
-    room_id: Mapped[int] = mapped_column(ForeignKey('room.id'))
+    room_id: Mapped[int] = mapped_column(ForeignKey('mud_object.parent'))
+    short_desc: Mapped[str] = mapped_column(ForeignKey('mud_object.short_desc'))
+    long_desc: Mapped[str] = mapped_column(ForeignKey('mud_object.long_desc'))
 
     @classmethod
     def validate_account(cls, session, character, hash):

@@ -13,5 +13,5 @@ with Session(ENGINE) as session:
     RoomConnection.create_bidirectional_connection(session, r1, r2, 'east') 
     MobileType.add_type(session, 'monster')
     Mobile.create_mobile(session, 'a big stinky green goblin', 'monster', 1)
-    Character.create_character(session, 'Rha', 1)
+    Character.create_character(session, 'Rha', 1, 'Rha, God of the Sun')
     logging.info(Room.get_exits(session, r1.id))

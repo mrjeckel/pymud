@@ -3,10 +3,13 @@ import random
 import spacy
 
 from typing import List, Tuple
+from sqlalchemy.orm.session import Session
 from exceptions import (UnknownVerb,
                         BadArguments,
                         UnknownVerb)
 from mud_parser.verb import Emote, ACTION_DICT, EMOTE_DICT
+
+from data.models import Room, Character
 
 NLP = spacy.load("en_core_web_sm")
 
@@ -16,7 +19,7 @@ class Phrase:
     """
     EXCLUDE_FROM_NOUN_CHUNKS = ['DET']
 
-    def __init__(self, phrase: str):
+    def __init__(self, phrase: str, room_id: int):
         self.is_emote = False
         self.is_action = False
         self.verb, self.ins, self.noun_chunks, self.descriptors = self._parse(phrase)
@@ -53,6 +56,13 @@ class Phrase:
             noun_chunk = [token.text for token in chunk if token.pos_ not in self.EXCLUDE_FROM_NOUN_CHUNKS]
             noun_chunks.append(' '.join(noun_chunk))
         return noun_chunks
+    
+    def _find_target(self, session: Session, doc: spacy.tokens.doc.Doc, room_id: int) -> str:
+        """
+        Matches the last word in a doc with short_desc of a MudObject subclass
+        """
+        Room.match_short_desc(session, doc[-1], room_id)
+        # TODO: this needs to be smarter
     
     def __iter__(self):
         """
@@ -94,14 +104,14 @@ class MudParser:
     ]
     
     @classmethod
-    def parse_data(cls, session, character, data):
+    def parse_data(cls, session: Session, character: Character, data: str):
         """
         """
         try:
             input = data.decode('utf-8').strip().lower()
             if not input:
                 return b''.encode('utf-8')
-            phrase = Phrase(input)
+            phrase = Phrase(input, character.room_id)
         except UnknownVerb:
             logging.debug(f'Unable to parse data: {input} - {character}')
             return random.choice(cls.PHRASE_ERROR).encode('utf-8')
