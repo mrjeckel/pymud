@@ -2,9 +2,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from sqlalchemy.orm.session import Session
-from mud_parser.verb import Verb
+from mud_parser.verb import Verb, VerbResponse
 
-from data.models import Character
+from data.models import Character, Room
 
 if TYPE_CHECKING:
     from mud_parser import Phrase
@@ -163,12 +163,24 @@ class Emote(Verb):
     @classmethod
     def execute(cls, session: Session, character: Character, phrase: Phrase):
         descriptor = phrase.descriptors[0] if phrase.descriptors else None
+        target_id = Room.get_character_id(session, _, character.room_id)
         if descriptor:
-            return cls.MODIFIED_STRING.format(descriptor)
+            return VerbResponse(message_i=cls.FIRST_STRING.format(descriptor),
+                                character_id=character.id,
+                                message_You=cls.SECOND_STRING)
         else:
-            return cls.BASE_STRING
+            return VerbResponse(message_i=cls.FIRST_BASE_STRING,
+                                character_id=character.id,
+                                message_you=cls.SECOND_BASE_STRING,
+                                target_id=target_id,
+                                message_they=cls.THIRD_BASE_STRING,
+                                room_id=character.room_id)
     
     
 class Laugh(Emote):
-    BASE_STRING = 'You laugh out loud!'
-    MODIFIED_STRING = 'You laugh {}!'
+    FIRST_BASE_STRING = 'You laugh out loud!'
+    FIRST_STRING = 'You laugh {}!'
+    SECOND_BASE_STRING = '{} laughs out you!'
+    SECOND_STRING = '{} laughs {} at you!'
+    THIRD_BASE_STRING = '{} laughs out loud!'
+    THIRD_STRING = '{} laughs {}!'

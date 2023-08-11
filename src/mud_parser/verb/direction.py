@@ -2,7 +2,7 @@ from __future__ import annotations
 from sqlalchemy.orm.session import Session
 from typing import TYPE_CHECKING
 
-from mud_parser.verb import Action
+from mud_parser.verb import Action, VerbResponse
 from exceptions import BadArguments, BadRoomConnection
 
 from data.models import Room, Character
@@ -28,7 +28,7 @@ class Direction(Action):
             Character.move(session, character, direction)
             return Room.get_desc(session, character)
         except BadRoomConnection:
-            return 'There\'s no exit in that direction.'
+            return VerbResponse(message_i='There\'s no exit in that direction.', character_id=character.id)
 
 
 class North(Direction):

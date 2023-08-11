@@ -118,6 +118,15 @@ class Room(MudObject):
         return session.execute(
             select(Character.id).where(Character.room_id == room_id)
             ).scalars().all()
+    
+    @classmethod
+    def get_character_id(cls, session, character_name, room_id):
+        return session.execute(
+            select(Character.id).where(
+                (Character.name == character_name) &
+                (Character.room_id == room_id))
+            ).scalar_one()
+
 
 class RoomConnection(Base):
     __tablename__ = 'room_connection'

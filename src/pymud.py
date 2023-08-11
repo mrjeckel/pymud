@@ -3,12 +3,11 @@ import socket
 import threading
 import logging
 import copy
-import sched
 
 from sqlalchemy.orm import scoped_session, sessionmaker
 from login_manager import LoginManager
 from mud_parser import MudParser
-from server_queue import EventQueue
+from event_queue import EventQueue
 from config import (HOST,
                     PORT,
                     DATABASE_ADDRESS,
@@ -37,11 +36,11 @@ class MudServer:
         self.event_queue = EventQueue()
         self.unauthenticated_client_threads = []
         self.authenticated_client_threads = {}
-        self.scheduler = sched.scheduler()
 
-        self.scheduler.enter(1, 1, self._accept_connections)
-        self.scheduler.enter(2, 2, self._refresh_threads)
-        self.scheduler.run()
+        while True:
+            self._accept_connections()
+            self._refresh_threads()
+            self._service_queue()
 
     def _accept_connections(self):
         """
@@ -66,7 +65,11 @@ class MudServer:
         for character_id, thread in copy.copy(self.authenticated_client_threads).items():
             if not thread.is_alive():
                 self.authenticated_client_threads.pop(character_id)
-            
+
+    def _service_queue(self):
+        """
+        Send all events scheduled for now or earlier
+        """
         with self.db_session() as session:
             self.event_queue.execute_events(session, self.authenticated_client_threads)
 
@@ -82,7 +85,7 @@ class ClientThread(threading.Thread):
         self.address = address
         self.buffer_size = buffer_size
         self.db_session = db_session
-        self.server_queue = event_queue
+        self.event_queue = event_queue
         self.character_id = None
 
         super().__init__()

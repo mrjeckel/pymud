@@ -12,3 +12,6 @@ class BadArguments(Exception):
 
 class BadRoomConnection(Exception):
     pass
+
+class BadResponse(Exception):
+    pass

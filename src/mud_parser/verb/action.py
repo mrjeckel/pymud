@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Union, Callable
 
 from exceptions import BadArguments
-from mud_parser.verb import Verb
+from mud_parser.verb import Verb, VerbResponse
 
 from data.models import Room, Character
 
@@ -42,7 +42,7 @@ class Kill(Action):
 
     @staticmethod
     def execute(session: Session, character: Character, phrase: Phrase):
-        return 'Kill what?'
+        return VerbResponse(message_i='Kill what?', character_id=character.id)
 
 class Look(Action):
     @staticmethod
@@ -58,7 +58,7 @@ class Look(Action):
             result = Room.get_desc(session, character)
         else:
             result = 'You see nothing.'
-        return result
+        return VerbResponse(message_i=result, character_id=character.id)
 
 class Put(Action):
     @staticmethod
@@ -70,4 +70,4 @@ class Put(Action):
 
     @staticmethod
     def execute(session: Session, character: Character, phrase: Phrase):
-        return 'Put what?'
+        return VerbResponse(message_i='Put what?', character_id=character.id)

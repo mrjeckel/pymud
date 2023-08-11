@@ -1,4 +1,4 @@
-from .verb import Verb
+from .verb import Verb, VerbResponse
 from .action import Action
 from .emote import Emote
 from .direction import Direction
