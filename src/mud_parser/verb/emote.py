@@ -163,7 +163,7 @@ class Emote(Verb):
     @classmethod
     def execute(cls, session: Session, character: Character, phrase: Phrase):
         descriptor = phrase.descriptors[0] if phrase.descriptors else None
-        target_id = Room.get_character_id(session, _, character.room_id)
+        target_id = Room.get_character_id(session, _, character.parent)
         if descriptor:
             return VerbResponse(message_i=cls.FIRST_STRING.format(descriptor),
                                 character_id=character.id,
@@ -174,7 +174,7 @@ class Emote(Verb):
                                 message_you=cls.SECOND_BASE_STRING,
                                 target_id=target_id,
                                 message_they=cls.THIRD_BASE_STRING,
-                                room_id=character.room_id)
+                                room_id=character.parent)
     
     
 class Laugh(Emote):

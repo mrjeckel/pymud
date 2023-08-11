@@ -38,20 +38,22 @@ class VerbResponse:
         self._validate_response()
 
     def _validate_response(self):
-        if (self.message_i is not None) != (self.character_id is not None):
+        if (self.message_i != None) != (self.character_id != None):
             raise BadResponse("Either set both response.message_i and response.character_id, or leave both unset")
-        elif (self.message_you is not None) != (self.target_id is not None):
+        elif (self.message_you != None) != (self.target_id != None):
             raise BadResponse("Either set both response.message_you and response.target_id, or leave both unset")
-        elif (self.message_they is None) == (self.message_i is None) == (self.message_you is None):
+        elif (self.message_they == None) == (self.message_i == None) == (self.message_you == None):
             raise BadResponse("response.message_they must be set for global and/or room messaging")
         
     def _parse(self, message: Union[Tuple[str], str]) -> str:
         """
         Converts a tuple into a multiline message
         """
+        import logging
         try:
             if isinstance(message, tuple):
-                return b'\r\n'.join(message.encode('utf-8'))
+                return b'\r\n'.join([m.encode('utf-8') for m in message])
             return message.encode('utf-8')
-        except AttributeError:
+        except AttributeError as e:
+            logging.debug(e)
             return None

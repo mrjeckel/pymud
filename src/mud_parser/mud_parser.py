@@ -69,11 +69,10 @@ class Phrase:
         """
         try:
             last_chunk = list(doc.noun_chunks)[-1].text
+            if doc[-1].text in last_chunk:
+                return Room.match_short_desc(self.session, last_chunk, self.room_id)[0]
         except IndexError:
             return None
-        else:
-            if doc[-1].text in last_chunk:
-                return Room.match_short_desc(self.session, doc[-1], self.room_id)[0]
         return None
     
     def __iter__(self):
@@ -125,7 +124,7 @@ class MudParser:
             input = data.decode('utf-8').strip().lower()
             if not input:
                 return b''.encode('utf-8')
-            phrase = Phrase(session, input, character.room_id)
+            phrase = Phrase(session, input, character.parent)
         except UnknownVerb:
             logging.debug(f'Unable to parse data: {input} - {character.name}')
             return random.choice(cls.PHRASE_ERROR).encode('utf-8')

@@ -29,12 +29,12 @@ class MudObject(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     short_desc: Mapped[str] = mapped_column(String(32), nullable=False)
     long_desc: Mapped[Optional[str]] = mapped_column(String(255))
+    parent: Mapped[Optional[int]] = mapped_column(ForeignKey('mud_object.id'))
 
 class Item(MudObject):
     __tablename__ = 'item'
     id: Mapped[int] = mapped_column(ForeignKey('mud_object.id'), primary_key=True)
     item_type: Mapped[int] = mapped_column(ForeignKey('item_type.name'))
-    parent: Mapped[int] = mapped_column(ForeignKey('mud_object.id'))
 
     __mapper_args__ = {
         'inherit_condition': (id == MudObject.id)
@@ -48,7 +48,6 @@ class Mobile(MudObject):
     __tablename__ = 'mobile'
     id: Mapped[int] = mapped_column(ForeignKey('mud_object.id'), primary_key=True)
     mobile_type: Mapped[int] = mapped_column(ForeignKey('mobile_type.name'))
-    room_id: Mapped[int] = mapped_column(ForeignKey('room.id'))
 
     __mapper_args__ = {
         'inherit_condition': (id == MudObject.id)
@@ -63,17 +62,18 @@ class Mobile(MudObject):
                       long_desc=None):
         mobile = Mobile(short_desc=short_desc,
                         mobile_type=mobile_type,
-                        room_id=room_id,
+                        parent=room_id,
                         long_desc=long_desc)
         session.add(mobile)
         session.commit()
         return mobile
 
     @classmethod
-    def delete_mobile(cls, session: Session, id: int):
-        session.execute(
+    def delete(cls, session: Session, id: int):
+        mobile = session.execute(
             select(Mobile).where(Mobile.id == id)
-            ).delete()
+            ).scalars().one()
+        session.delete(mobile)
         session.commit()
 
 class MobileType(Base):
@@ -119,14 +119,15 @@ class Room(MudObject):
     
     @classmethod
     def get_desc(cls, session: Session, room_id: int) -> Tuple[str, str]:
-        return session.execute(
+        desc = session.execute(
             select(Room.short_desc, Room.long_desc).where(Room.id == room_id)
-            ).scalar_one()
+            ).one()
+        return tuple(desc)
     
     @classmethod
     def get_occupants(cls, session: Session, room_id: int) -> List[int]:
         return session.execute(
-            select(Character.id).where(Character.room_id == room_id)
+            select(Character.id).where(Character.parent == room_id)
             ).scalars().all()
     
     @classmethod
@@ -134,7 +135,7 @@ class Room(MudObject):
         return session.execute(
             select(Character.id).where(
                 (Character.name == character_name) &
-                (Character.room_id == room_id))
+                (Character.parent == room_id))
             ).scalar_one()
     
     @classmethod
@@ -143,7 +144,7 @@ class Room(MudObject):
             select(MudObject.id).where(
                 (MudObject.short_desc.contains(short_desc)) &
                 (MudObject.parent == room_id))
-            ).scalars.all()
+            ).scalars().all()
     
 
 class RoomConnection(Base):
@@ -194,7 +195,6 @@ class Character(MudObject):
     id: Mapped[int] = mapped_column(ForeignKey('mud_object.id'), primary_key=True)
     name: Mapped[str] = mapped_column(String(16), unique=True)
     account_hash: Mapped[str] = mapped_column(String(64))
-    room_id: Mapped[int] = mapped_column(ForeignKey('room.id'))
 
     __mapper_args__ = {
         'inherit_condition': (id == MudObject.id)
@@ -219,7 +219,7 @@ class Character(MudObject):
                          short_desc: str,
                          room_id: int=1):
         try:
-            character = Character(name=name, account_hash=hash, short_desc=short_desc, room_id=room_id)
+            character = Character(name=name, account_hash=hash, short_desc=short_desc, parent=room_id)
             session.add(character)
             session.commit()
         except IntegrityError as e:
@@ -238,11 +238,11 @@ class Character(MudObject):
         try:
             new_room = session.execute(
                 select(RoomConnection.destination_id).where(
-                    (RoomConnection.room_id == character.room_id) &
+                    (RoomConnection.room_id == character.parent) &
                     (RoomConnection.direction == direction)
                 )).scalar_one()
             session.execute(
-                update(Character).where(Character.id == character.id).values(room_id=new_room)
+                update(MudObject).where(MudObject.id == character.id).values(parent=new_room)
                 )
             session.commit()
         except (NoResultFound, MultipleResultsFound) as e:

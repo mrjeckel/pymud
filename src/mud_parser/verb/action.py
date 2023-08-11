@@ -26,7 +26,7 @@ class Action(ABC, Verb):
     @abstractmethod
     def execute(session: Session, character: Character, phrase: Phrase) -> Union[None, Callable]:
         """
-        Execute the requested command; returns None on success or (Callable, str) when more commands follow
+        Execute the requested command
         """
         raise NotImplementedError('execute was not implemented!')
 
@@ -55,10 +55,10 @@ class Look(Action):
     @staticmethod
     def execute(session: Session, character: Character, phrase: Phrase):
         if not phrase.noun_chunks:
-            result = Room.get_desc(session, character.room_id)
+            room_desc = Room.get_desc(session, character.parent)
         else:
-            result = 'You see nothing.'
-        return VerbResponse(message_i=result, character_id=character.id)
+            room_desc = 'You see nothing.'
+        return VerbResponse(message_i=room_desc, character_id=character.id)
 
 class Put(Action):
     @staticmethod

@@ -26,7 +26,8 @@ class Direction(Action):
     def execute_direction(session: Session, character: Character, direction: str):
         try:
             Character.move(session, character, direction)
-            return Room.get_desc(session, character)
+            room_desc = Room.get_desc(session, character.parent)
+            return VerbResponse(message_i=room_desc, character_id=character.id)
         except BadRoomConnection:
             return VerbResponse(message_i='There\'s no exit in that direction.', character_id=character.id)
 
