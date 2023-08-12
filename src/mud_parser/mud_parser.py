@@ -6,7 +6,8 @@ from typing import List, Tuple
 from sqlalchemy.orm.session import Session
 from exceptions import (UnknownVerb,
                         BadArguments,
-                        UnknownVerb)
+                        UnknownVerb,
+                        UnknownTarget)
 from mud_parser.verb import Emote, ACTION_DICT, EMOTE_DICT
 
 from data.models import Room, Character
@@ -24,7 +25,7 @@ class Phrase:
         self.is_action = False
         self.session = session
         self.room_id = room_id
-        self.verb, self.ins, self.noun_chunks, self.descriptors = self._parse(phrase)
+        self.verb, self.ins, self.noun_chunks, self.descriptors, self.target_id = self._parse(phrase)
 
     def _parse(self, phrase: str) -> Tuple[str, List[str], List[str]]:
         """
@@ -32,9 +33,9 @@ class Phrase:
         """
         doc = NLP(phrase)
         verb = doc[0].text
-        target = self._find_target(doc)
+        target_id = self._find_target(doc)
 
-        if target:
+        if target_id:
             doc = NLP(doc[:-1].text)
 
         ins = [token.text for token in doc[1:] if token.pos_ == 'ADP']
@@ -51,7 +52,7 @@ class Phrase:
         else:
             raise UnknownVerb
             
-        return verb, ins, noun_chunks, descriptors
+        return verb, ins, noun_chunks, descriptors, target_id
     
     def _build_noun_chunks(self, doc: spacy.tokens.doc.Doc) -> List[str]:
         """
@@ -69,10 +70,13 @@ class Phrase:
         """
         try:
             last_chunk = list(doc.noun_chunks)[-1].text
+        except IndexError:
+            return None
+        try:
             if doc[-1].text in last_chunk:
                 return Room.match_short_desc(self.session, last_chunk, self.room_id)[0]
         except IndexError:
-            return None
+            raise UnknownTarget
         return None
     
     def __iter__(self):
@@ -114,6 +118,11 @@ class MudParser:
         'Come again?',
         'Please try to be more coherent.'
     ]
+    TARGET_ERROR = [
+        'I couldn\'t find what you were referring to.',
+        'That is not here.',
+        'Do what to whom?'
+    ]
     
     @classmethod
     def parse_data(cls, session: Session, character: Character, data: str):
@@ -128,6 +137,9 @@ class MudParser:
         except UnknownVerb:
             logging.debug(f'Unable to parse data: {input} - {character.name}')
             return random.choice(cls.PHRASE_ERROR).encode('utf-8')
+        except UnknownTarget:
+            logging.debug(f'Unable to find target: {input} - {character.name}')
+            return random.choice(cls.TARGET_ERROR).encode('utf-8')
         except BadArguments as e:
             return str(e).encode('utf-8')
 

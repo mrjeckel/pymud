@@ -15,3 +15,6 @@ class BadRoomConnection(Exception):
 
 class BadResponse(Exception):
     pass
+
+class UnknownTarget(Exception):
+    pass

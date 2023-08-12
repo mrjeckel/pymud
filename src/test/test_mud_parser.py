@@ -1,5 +1,30 @@
 import unittest
+
+from unittest import mock
 from mud_parser import Phrase
+from data.models import MudObject, Room
+
+class TestMudParser(unittest.TestCase):
+    CHARACTER_ID = 1
+    ROOM_DESC = 'You are in the void.'
+    TARGET_DESC = 'a stinky green goblin'
+
+    @mock.patch.multiple(
+            Room,
+            match_short_desc=mock.MagicMock(return_value=CHARACTER_ID),
+            get_desc=mock.MagicMock(return_value=ROOM_DESC)
+    )
+    @mock.patch.multiple(
+            MudObject,
+            get_desc=mock.MagicMock(return_value=TARGET_DESC)
+    )
+    def test_response(self):
+        """
+        """
+        print(Room.match_short_desc())
+
+
+    
 
 class TestPhrase(unittest.TestCase):
     def test_action(self):

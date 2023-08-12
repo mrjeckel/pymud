@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Union, Callable
 from exceptions import BadArguments
 from mud_parser.verb import Verb, VerbResponse
 
-from data.models import Room, Character
+from data.models import MudObject, Room, Character
 
 if TYPE_CHECKING:
     from mud_parser import Phrase
@@ -54,11 +54,11 @@ class Look(Action):
 
     @staticmethod
     def execute(session: Session, character: Character, phrase: Phrase):
-        if not phrase.noun_chunks:
-            room_desc = Room.get_desc(session, character.parent)
+        if not phrase.target_id:
+            desc = Room.get_desc(session, character.parent)
         else:
-            room_desc = 'You see nothing.'
-        return VerbResponse(message_i=room_desc, character_id=character.id)
+            desc = MudObject.get_desc(session, phrase.target_id)
+        return VerbResponse(message_i=desc, character_id=character.id)
 
 class Put(Action):
     @staticmethod

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy.orm.session import Session
 from mud_parser.verb import Verb, VerbResponse
 
-from data.models import Character, Room
+from data.models import MudObject, Character
 
 if TYPE_CHECKING:
     from mud_parser import Phrase
@@ -163,24 +163,53 @@ class Emote(Verb):
     @classmethod
     def execute(cls, session: Session, character: Character, phrase: Phrase):
         descriptor = phrase.descriptors[0] if phrase.descriptors else None
-        target_id = Room.get_character_id(session, _, character.parent)
+        target_name = MudObject.get_short_desc(session, phrase.target_id)
+        if phrase.target_id and descriptor:
+            return VerbResponse(message_i=cls.FIRST_TARGET_STRING,
+                                character_id=character.id,
+                                message_you=cls.SECOND_TARGET_STRING,
+                                target_id=phrase.target_id,
+                                message_they=cls.THIRD_TARGET_STRING,
+                                room_id=character.parent)
+        if phrase.target_id:
+            return VerbResponse(message_i=cls.FIRST_BASE_TARGET_STRING,
+                                character_id=character.id,
+                                message_you=cls.SECOND_BASE_TARGET_STRING,
+                                target_id=phrase.target_id,
+                                message_they=cls.THIRD_BASE_TARGET_STRING,
+                                room_id=character.parent)
         if descriptor:
             return VerbResponse(message_i=cls.FIRST_STRING.format(descriptor),
                                 character_id=character.id,
-                                message_You=cls.SECOND_STRING)
-        else:
-            return VerbResponse(message_i=cls.FIRST_BASE_STRING,
-                                character_id=character.id,
-                                message_you=cls.SECOND_BASE_STRING,
-                                target_id=target_id,
-                                message_they=cls.THIRD_BASE_STRING,
+                                message_they=cls.SECOND_STRING,
                                 room_id=character.parent)
+        return VerbResponse(message_i=cls.FIRST_BASE_STRING,
+                            character_id=character.id,
+                            message_they=cls.THIRD_BASE_STRING,
+                            room_id=character.parent)
     
     
 class Laugh(Emote):
-    FIRST_BASE_STRING = 'You laugh out loud!'
     FIRST_STRING = 'You laugh {}!'
+    FIRST_BASE_STRING = 'You laugh out loud!'
+    FIRST_BASE_TARGET_STRING = 'You laugh at {}!'
+    SECOND_TARGET_STRING = '{} laughs {} at you!'
     SECOND_BASE_STRING = '{} laughs out you!'
-    SECOND_STRING = '{} laughs {} at you!'
-    THIRD_BASE_STRING = '{} laughs out loud!'
     THIRD_STRING = '{} laughs {}!'
+    THIRD_TARGET_STRING = '{} laughs at {} {}!'
+    THIRD_BASE_STRING = '{} laughs out loud!'
+    THIRD_BASE_TARGET_STRING = '{} laughs at {}!'
+    
+
+class Poke(Emote):
+    FIRST_STRING = 'You hold up your index finger {}!'
+    FIRST_TARGET_STRING = 'You poke {} {}.'
+    FIRST_BASE_STRING = 'You hold up your index finger.'
+    FIRST_BASE_TARGET_STRING = 'You poke {} in the ribs.'
+    SECOND_TARGET_STRING = '{} pokes you {}!'
+    SECOND_BASE_TARGET_STRING = '{} pokes you in the ribs. Ouch!'
+    THIRD_STRING = '{} laughs {}!'
+    THIRD_TARGET_STRING = '{} pokes {} in the ribs {}.'
+    THIRD_BASE_STRING = '{} laughs out loud!'
+    THIRD_BASE_TARGET_STRING = '{} pokes {} in the ribs!'
+    

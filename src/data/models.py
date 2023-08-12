@@ -31,6 +31,18 @@ class MudObject(Base):
     long_desc: Mapped[Optional[str]] = mapped_column(String(255))
     parent: Mapped[Optional[int]] = mapped_column(ForeignKey('mud_object.id'))
 
+    @classmethod
+    def get_short_desc(cls, session: Session, id: int):
+        return session.execute(
+            select(MudObject.short_desc).where(MudObject.id == id)
+            ).scalars().one()
+
+    @classmethod
+    def get_long_desc(cls, session: Session, id: int):
+        return session.execute(
+            select(MudObject.long_desc).where(MudObject.id == id)
+            ).scalars().one()
+
 class Item(MudObject):
     __tablename__ = 'item'
     id: Mapped[int] = mapped_column(ForeignKey('mud_object.id'), primary_key=True)
