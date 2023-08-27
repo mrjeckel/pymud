@@ -20,7 +20,7 @@ class Verb:
         return class_dict
 
     @staticmethod
-    def _find_targets(self, session: Session, character: Character, noun_chunks: List[str]) -> List[MudObject]:
+    def _find_targets(session: Session, character: Character, noun_chunks: List[str]) -> List[MudObject]:
         """
         Matches noun_chunks to MudObjects with a matching short description
         """

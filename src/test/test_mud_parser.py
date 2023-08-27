@@ -1,8 +1,9 @@
 import unittest
 
 from unittest.mock import patch
-from mud_parser import Phrase
-from data.models import MudObject, Room
+from mud_parser import MudParser, Phrase
+from mud_parser.verb import VerbResponse
+from data.models import MudObject, Room, Character
 from exceptions import BadArguments
 
 MUDOBJECT = MudObject(
@@ -11,16 +12,41 @@ MUDOBJECT = MudObject(
     long_desc='A not-so-simple MudObject',
     parent=1
 )
+CHARACTER = Character(
+    id=2,
+    short_desc='Novice TestCharacter',
+    long_desc='a simple looking test character',
+    name='TestCharacter',
+    account_hash='abcdef12345'
+)
 ROOM_DESC = 'You are in the void.'
 TARGET_DESC = 'a stinky green goblin'
 
+@patch.object(Room, 'match_short_desc', lambda x, y, z: [MUDOBJECT])
 @patch.object(Room, 'get_desc', lambda x, y: ROOM_DESC)
 class TestMudParser(unittest.TestCase):
-    def test_response(self):
+    def test_unknown_verb(self):
         """
+        Test that garbage input returns a phrase error response
         """
-        print(Room.get_desc())
+        parse_return = MudParser.parse_data(None, CHARACTER, b'rawriamadinosaur').message_i
+        self.assertTrue(isinstance(parse_return, bytes))
+        self.assertTrue(parse_return.decode('utf-8') in MudParser.PHRASE_ERROR)
 
+    def test_unknown_target(self):
+        """
+        Test that an unmatched target returns a target error response
+        """
+        parse_return = MudParser.parse_data(None, CHARACTER, b'look unknowncharacter').message_i
+        self.assertTrue(parse_return.decode('utf-8') in MudParser.TARGET_ERROR)
+
+    def test_target(self):
+        """
+        Test that a matched target returns the long_desc
+        """
+        parse_return = MudParser.parse_data(None, CHARACTER, b'look testcharacter').message_i
+        self.assertTrue(parse_return, CHARACTER.long_desc)
+        
 @patch.object(Room, 'match_short_desc', lambda x, y, z: [MUDOBJECT])
 
 class TestPhrase(unittest.TestCase):

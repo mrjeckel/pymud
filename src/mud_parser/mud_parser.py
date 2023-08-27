@@ -1,6 +1,7 @@
 import logging
 import random
 import spacy
+import copy
 
 from typing import List, Tuple, Union
 from sqlalchemy.orm.session import Session
@@ -8,9 +9,9 @@ from exceptions import (UnknownVerb,
                         BadArguments,
                         UnknownVerb,
                         UnknownTarget)
-from mud_parser.verb import Emote, ACTION_DICT, EMOTE_DICT
+from mud_parser.verb import VerbResponse, Emote, ACTION_DICT, EMOTE_DICT
 
-from data.models import Room, Character
+from data.models import Character
 
 NLP = spacy.load("en_core_web_sm")
 
@@ -52,11 +53,23 @@ class Phrase:
         """
         Construct noun phrases with adjectives and nouns
         """
+        nouns = [word for word in doc[1:] if word.pos_ == 'NOUN']
+        import pdb;
+        pdb.set_trace()
         noun_chunks = []
         for chunk in doc[1:].noun_chunks:
+            for noun in copy.copy(nouns):
+                nouns.remove(noun)
+                if noun not in chunk:
+                    noun_chunks.append(noun)          
+                else:
+                    break
             noun_chunk = [token.text for token in chunk if token.pos_ not in self.EXCLUDE_FROM_NOUN_CHUNKS]
             noun_chunks.append(' '.join(noun_chunk))
-        return noun_chunks
+        if noun_chunks:
+            return noun_chunks
+        else:
+            return nouns
     
     def __iter__(self):
         """
@@ -103,14 +116,14 @@ class MudParser:
     ]
     
     @classmethod
-    def parse_data(cls, session: Session, character: Character, data: str):
+    def parse_data(cls, session: Session, character: Character, data: bytes):
         """
         Invoke a verb and format the response
         """
         try:
             input = data.decode('utf-8').strip().lower()
             if not input:
-                return b''.encode('utf-8')
+                return VerbResponse(b'', character_id=character.id)
             phrase = Phrase(input)
             if phrase.is_action:
                 response = ACTION_DICT[phrase.verb].execute(session, character, phrase)
@@ -119,12 +132,14 @@ class MudParser:
             return response
         except UnknownVerb:
             logging.debug(f'Unable to parse data: {input} - {character.name}')
-            return random.choice(cls.PHRASE_ERROR).encode('utf-8')
+            return VerbResponse(message_i=random.choice(cls.PHRASE_ERROR),
+                                character_id=character.id)
         except UnknownTarget:
             logging.debug(f'Unable to find target: {input} - {character.name}')
-            return random.choice(cls.TARGET_ERROR).encode('utf-8')
+            return VerbResponse(message_i=random.choice(cls.TARGET_ERROR),
+                                character_id=character.id)
         except BadArguments as e:
-            return str(e).encode('utf-8')
+            return VerbResponse(message_i=str(e), character_id=character.id)
     
     @classmethod
     def format_newline(cls, message: bytes):
