@@ -133,8 +133,8 @@ class Room(MudObject):
     def get_desc(cls, session: Session, room_id: int) -> Tuple[str, str]:
         desc = session.execute(
             select(Room.short_desc, Room.long_desc).where(Room.id == room_id)
-            ).one()
-        return tuple(desc)
+            ).scalar_one()
+        return desc
     
     @classmethod
     def get_occupants(cls, session: Session, room_id: int) -> List[int]:

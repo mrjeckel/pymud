@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Tuple
 
 from sqlalchemy.orm.session import Session
 from mud_parser.verb import Verb, VerbResponse
@@ -146,14 +146,14 @@ class Emote(Verb):
     MODIFIED_STRING = None
 
     @staticmethod
-    def validate_phrase_structure(noun_chunks, descriptors):
-        if noun_chunks:
-            assert(len(noun_chunks) == 1)
+    def validate_phrase_structure(targets: List[Tuple[str, int]], descriptors: List[str]):
+        if targets:
+            assert(len(targets) == 1)
         if descriptors:
             assert(len(descriptors) == 1)
 
     @classmethod
-    def complete_adverb(cls, word):
+    def complete_adverb(cls, word: str):
         if len(word) >= 3:
             for adverb in cls.ADVERBS:
                 if word in adverb:
@@ -161,17 +161,17 @@ class Emote(Verb):
         return None
     
     @classmethod
-    def execute(cls, session: Session, character: Character, phrase: Phrase):
+    def execute(cls, session: Session, character: Character, phrase: Phrase) -> VerbResponse:
         descriptor = phrase.descriptors[0] if phrase.descriptors else None
-        target_name = MudObject.get_short_desc(session, phrase.target_id)
-        if phrase.target_id and descriptor:
+        target_name = MudObject.get_short_desc(session, phrase.targets[0][1])
+        if target_name and descriptor:
             return VerbResponse(message_i=cls.FIRST_TARGET_STRING,
                                 character_id=character.id,
                                 message_you=cls.SECOND_TARGET_STRING,
                                 target_id=phrase.target_id,
                                 message_they=cls.THIRD_TARGET_STRING,
                                 room_id=character.parent)
-        if phrase.target_id:
+        if target_name:
             return VerbResponse(message_i=cls.FIRST_BASE_TARGET_STRING,
                                 character_id=character.id,
                                 message_you=cls.SECOND_BASE_TARGET_STRING,

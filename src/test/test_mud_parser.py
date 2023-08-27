@@ -1,37 +1,28 @@
 import unittest
 
-from unittest import mock
+from unittest.mock import patch
 from mud_parser import Phrase
 from data.models import MudObject, Room
+from exceptions import BadArguments
 
-class TestMudParser(unittest.TestCase):
-    CHARACTER_ID = 1
-    ROOM_DESC = 'You are in the void.'
-    TARGET_DESC = 'a stinky green goblin'
+MUDOBJECT_ID = 1
+ROOM_DESC = 'You are in the void.'
+TARGET_DESC = 'a stinky green goblin'
 
-    @mock.patch.multiple(
-            Room,
-            match_short_desc=mock.MagicMock(return_value=CHARACTER_ID),
-            get_desc=mock.MagicMock(return_value=ROOM_DESC)
-    )
-    @mock.patch.multiple(
-            MudObject,
-            get_desc=mock.MagicMock(return_value=TARGET_DESC)
-    )
-    def test_response(self):
-        """
-        """
-        print(Room.match_short_desc())
+#class TestMudParser(unittest.TestCase):
+#    def test_response(self):
+#        """
+#        """
+#        print(Room.match_short_desc())
 
-
-    
-
+@patch.object(Room, 'match_short_desc', lambda x, y, z: [MUDOBJECT_ID])
+@patch.object(Room, 'get_desc', lambda x, y: ROOM_DESC)
 class TestPhrase(unittest.TestCase):
     def test_action(self):
         """
         Test verb and noun phrase
         """
-        test_phrase = Phrase('kill slimy green goblin')
+        test_phrase = Phrase(None, 'kill slimy green goblin', 1)
         self.assertEqual(test_phrase.verb, 'kill')
         self.assertEqual(test_phrase.noun_chunks[-1], 'slimy green goblin')
 
@@ -39,7 +30,7 @@ class TestPhrase(unittest.TestCase):
         """
         Test verb, noun phrase, and joining preposition
         """
-        test_phrase = Phrase('put big blue cracker in shiny gold chest')
+        test_phrase = Phrase(None, 'put big blue cracker in shiny gold chest', 1)
         self.assertEqual(test_phrase.verb, 'put')
         self.assertEqual(test_phrase.noun_chunks[0], 'big blue cracker')
         self.assertEqual(test_phrase.ins[-1], 'in')
@@ -49,45 +40,45 @@ class TestPhrase(unittest.TestCase):
         """
         Test that we error if noun_chunks != ins + 1
         """
-        with self.assertRaises(AssertionError):
-            Phrase('kill slimy green goblin at')
+        with self.assertRaises(BadArguments):
+            Phrase(None, 'kill slimy green goblin at', 1)
 
     def test_action_without_preposition(self):
         """
         Test that we error without a preopositional modifier
         """
-        with self.assertRaises(AssertionError):
-            Phrase('put big blue cracker shiny gold chest')
+        with self.assertRaises(BadArguments):
+            Phrase(None, 'put big blue cracker shiny gold chest', 1)
         # we need our verb lookup for this to work
 
     def test_emote(self):
         """
         Test emote verb
         """
-        test_phrase = Phrase('laugh')
+        test_phrase = Phrase(None, 'laugh', 1)
         self.assertEqual(test_phrase.verb, 'laugh')
 
     def test_emote_with_adverb(self):
         """
         Test emote verb, adverb modifier
         """
-        test_phrase = Phrase('laugh maniacally')
+        test_phrase = Phrase(None, 'laugh maniacally', 1)
         self.assertEqual(test_phrase.verb, 'laugh')
-        self.assertEqual(test_phrase.descriptors[-1], 'maniacally')
+        self.assertEqual(test_phrase.descriptors[-1], 'maniacally', 1)
 
     def test_emote_with_adjective(self):
         """
         Test emote verb, adjective modifier
         """
-        test_phrase = Phrase('laugh maniac')
+        test_phrase = Phrase(None, 'laugh maniac', 1)
         self.assertEqual(test_phrase.verb, 'laugh')
-        self.assertEqual(test_phrase.descriptors[-1], 'maniacally')
+        self.assertEqual(test_phrase.descriptors[-1], 'maniacally', 1)
 
     def test_emote_with_two_modifiers(self):
         """
         Test emote with two modifiers
         """
-        test_phrase = Phrase('laugh joyfully maniacally')
+        test_phrase = Phrase(None, 'laugh joyfully maniacally', 1)
         self.assertEqual(test_phrase.verb, 'laugh')
         self.assertEqual(test_phrase.descriptors[-1], 'joyfully')
 
@@ -101,7 +92,7 @@ class TestPhrase(unittest.TestCase):
             2: 'in',
             3: 'shiny golden chest'
         }
-        test_phrase = Phrase(' '.join(mapping.values()))
+        test_phrase = Phrase(None, ' '.join(mapping.values()), 1)
 
         for index, part_of_speech in enumerate(test_phrase):
             self.assertEqual(mapping[index], part_of_speech)
@@ -116,7 +107,7 @@ class TestPhrase(unittest.TestCase):
             2: 'at',
             3: 'George'
         }
-        test_phrase = Phrase(' '.join(mapping.values()))
+        test_phrase = Phrase(None, ' '.join(mapping.values()), 1)
 
         for index, part_of_speech in enumerate(test_phrase):
             # we drop prepositions from emotes

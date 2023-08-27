@@ -2,7 +2,7 @@ import logging
 import random
 import spacy
 
-from typing import List, Tuple
+from typing import List, Tuple, Union
 from sqlalchemy.orm.session import Session
 from exceptions import (UnknownVerb,
                         BadArguments,
@@ -33,26 +33,23 @@ class Phrase:
         """
         doc = NLP(phrase)
         verb = doc[0].text
-        target_id = self._find_target(doc)
-
-        if target_id:
-            doc = NLP(doc[:-1].text)
 
         ins = [token.text for token in doc[1:] if token.pos_ == 'ADP']
         descriptors = []
         noun_chunks = self._build_noun_chunks(doc)
+        targets = self._find_targets(noun_chunks)
 
         if verb in ACTION_DICT.keys():
             self.is_action = True
-            ACTION_DICT[verb].validate_phrase_structure(noun_chunks, ins)
+            ACTION_DICT[verb].validate_phrase_structure(ins, targets)
         elif verb in EMOTE_DICT.keys():
             self.is_emote = True
             descriptors = [Emote.complete_adverb(doc[1].text)] if len(doc) > 1 else []
-            Emote.validate_phrase_structure(noun_chunks, descriptors)
+            Emote.validate_phrase_structure(targets, descriptors)
         else:
             raise UnknownVerb
             
-        return verb, ins, noun_chunks, descriptors, target_id
+        return verb, ins, noun_chunks, descriptors, targets
     
     def _build_noun_chunks(self, doc: spacy.tokens.doc.Doc) -> List[str]:
         """
@@ -64,20 +61,16 @@ class Phrase:
             noun_chunks.append(' '.join(noun_chunk))
         return noun_chunks
     
-    def _find_target(self, doc: spacy.tokens.doc.Doc) -> str:
+    def _find_targets(self, noun_chunks: List[str]) -> Union[List[int], None]:
         """
         Matches the last word in a doc with short_desc of a MudObject subclass
         """
-        try:
-            last_chunk = list(doc.noun_chunks)[-1].text
-        except IndexError:
-            return None
-        try:
-            if doc[-1].text in last_chunk:
-                return Room.match_short_desc(self.session, last_chunk, self.room_id)[0]
-        except IndexError:
-            raise UnknownTarget
-        return None
+        targets = []
+        for chunk in noun_chunks:
+            targets.append(
+                (chunk, Room.match_short_desc(self.session, chunk, self.room_id)[0])
+                )
+        return targets
     
     def __iter__(self):
         """
