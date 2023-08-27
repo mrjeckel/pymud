@@ -151,9 +151,9 @@ class Room(MudObject):
             ).scalar_one()
     
     @classmethod
-    def match_short_desc(cls, session: Session, short_desc: str, room_id: int) -> List[int]:
+    def match_short_desc(cls, session: Session, short_desc: str, room_id: int) -> List[MudObject]:
         return session.execute(
-            select(MudObject.id).where(
+            select(MudObject).where(
                 (MudObject.short_desc.contains(short_desc)) &
                 (MudObject.parent == room_id))
             ).scalars().all()

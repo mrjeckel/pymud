@@ -1,12 +1,12 @@
 from __future__ import annotations
 from sqlalchemy.orm.session import Session
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Union, Callable, List, Tuple
+from typing import TYPE_CHECKING, List
 
-from exceptions import BadArguments
+from exceptions import BadArguments, UnknownTarget
 from mud_parser.verb import Verb, VerbResponse
 
-from data.models import MudObject, Room, Character
+from data.models import Room, Character
 
 if TYPE_CHECKING:
     from mud_parser import Phrase
@@ -16,7 +16,7 @@ class Action(ABC, Verb):
     
     @staticmethod
     @abstractmethod
-    def validate_phrase_structure(ins: List[str], targets: List[Tuple[str, int]]):
+    def validate_phrase_structure(ins: List[str], noun_chunks: List[str]):
         """
         Check that the requested command has valid arguments
         """
@@ -32,10 +32,10 @@ class Action(ABC, Verb):
 
 class Kill(Action):
     @staticmethod
-    def validate_phrase_structure(ins: List[str], targets: List[Tuple[str, int]]):
-        if not targets:
+    def validate_phrase_structure(ins: List[str], noun_chunks: List[str]):
+        if not noun_chunks:
             raise BadArguments('Kill what?')
-        if len(targets) > 1:
+        if len(noun_chunks) > 1:
             raise BadArguments('One at a time, bucko.')
         if ins:
             raise BadArguments('You can\'t reach that.')
@@ -46,27 +46,31 @@ class Kill(Action):
 
 class Look(Action):
     @staticmethod
-    def validate_phrase_structure(ins: List[str], targets: List[Tuple[str, int]]):
+    def validate_phrase_structure(ins: List[str], noun_chunks: List[str]):
         if len(ins) > 1:
             raise BadArguments('You don\'t hage x-ray vision! Try taking stuff out first.')
-        if len(targets) > 1:
+        if len(noun_chunks) > 1:
             raise BadArguments('You don\'t have enough eyes for that!')
 
     @staticmethod
     def execute(session: Session, character: Character, phrase: Phrase):
-        if not phrase.target_id:
+        if not phrase.noun_chunks:
             desc = Room.get_desc(session, character.parent)
         else:
-            desc = MudObject.get_desc(session, phrase.targets[0][1])
+            try:
+                targets = Verb._find_targets(session, character, phrase.noun_chunks)
+                desc = targets[0].long_desc
+            except IndexError:
+                raise UnknownTarget
         return VerbResponse(message_i=desc, character_id=character.id)
 
 class Put(Action):
     @staticmethod
-    def validate_phrase_structure(ins: List[str], targets: List[Tuple[str, int]]):
-        if not targets:
+    def validate_phrase_structure(ins: List[str], noun_chunks: List[str]):
+        if not noun_chunks:
             raise BadArguments('Put what?')
-        if not ins or len(ins) != len(targets) - 1:
-            raise BadArguments(f'Put {targets[0][0]} where?')
+        if not ins or len(ins) != len(noun_chunks) - 1:
+            raise BadArguments(f'Put {noun_chunks[0]} where?')
 
     @staticmethod
     def execute(session: Session, character: Character, phrase: Phrase):

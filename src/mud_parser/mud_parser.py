@@ -20,12 +20,10 @@ class Phrase:
     """
     EXCLUDE_FROM_NOUN_CHUNKS = ['DET']
 
-    def __init__(self, session: Session, phrase: str, room_id: int):
+    def __init__(self, phrase: str):
         self.is_emote = False
         self.is_action = False
-        self.session = session
-        self.room_id = room_id
-        self.verb, self.ins, self.noun_chunks, self.descriptors, self.target_id = self._parse(phrase)
+        self.verb, self.ins, self.noun_chunks, self.descriptors = self._parse(phrase)
 
     def _parse(self, phrase: str) -> Tuple[str, List[str], List[str]]:
         """
@@ -37,19 +35,18 @@ class Phrase:
         ins = [token.text for token in doc[1:] if token.pos_ == 'ADP']
         descriptors = []
         noun_chunks = self._build_noun_chunks(doc)
-        targets = self._find_targets(noun_chunks)
 
         if verb in ACTION_DICT.keys():
             self.is_action = True
-            ACTION_DICT[verb].validate_phrase_structure(ins, targets)
+            ACTION_DICT[verb].validate_phrase_structure(ins, noun_chunks)
         elif verb in EMOTE_DICT.keys():
             self.is_emote = True
             descriptors = [Emote.complete_adverb(doc[1].text)] if len(doc) > 1 else []
-            Emote.validate_phrase_structure(targets, descriptors)
+            Emote.validate_phrase_structure(noun_chunks, descriptors)
         else:
             raise UnknownVerb
             
-        return verb, ins, noun_chunks, descriptors, targets
+        return verb, ins, noun_chunks, descriptors
     
     def _build_noun_chunks(self, doc: spacy.tokens.doc.Doc) -> List[str]:
         """
@@ -60,17 +57,6 @@ class Phrase:
             noun_chunk = [token.text for token in chunk if token.pos_ not in self.EXCLUDE_FROM_NOUN_CHUNKS]
             noun_chunks.append(' '.join(noun_chunk))
         return noun_chunks
-    
-    def _find_targets(self, noun_chunks: List[str]) -> Union[List[int], None]:
-        """
-        Matches the last word in a doc with short_desc of a MudObject subclass
-        """
-        targets = []
-        for chunk in noun_chunks:
-            targets.append(
-                (chunk, Room.match_short_desc(self.session, chunk, self.room_id)[0])
-                )
-        return targets
     
     def __iter__(self):
         """
@@ -126,7 +112,12 @@ class MudParser:
             input = data.decode('utf-8').strip().lower()
             if not input:
                 return b''.encode('utf-8')
-            phrase = Phrase(session, input, character.parent)
+            phrase = Phrase(input)
+            if phrase.is_action:
+                response = ACTION_DICT[phrase.verb].execute(session, character, phrase)
+            elif phrase.is_emote:
+                response = EMOTE_DICT[phrase.verb].execute(session, character, phrase)
+            return response
         except UnknownVerb:
             logging.debug(f'Unable to parse data: {input} - {character.name}')
             return random.choice(cls.PHRASE_ERROR).encode('utf-8')
@@ -135,13 +126,6 @@ class MudParser:
             return random.choice(cls.TARGET_ERROR).encode('utf-8')
         except BadArguments as e:
             return str(e).encode('utf-8')
-
-        if phrase.is_action:
-            response = ACTION_DICT[phrase.verb].execute(session, character, phrase)
-        elif phrase.is_emote:
-            response = EMOTE_DICT[phrase.verb].execute(session, character, phrase)
-
-        return response
     
     @classmethod
     def format_newline(cls, message: bytes):

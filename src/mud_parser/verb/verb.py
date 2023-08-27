@@ -1,5 +1,7 @@
-from typing import Union, Tuple
+from sqlalchemy.orm.session import Session
+from typing import Union, Tuple, List
 from exceptions import BadResponse
+from data.models import MudObject, Room, Character
 
 class Verb:
     @classmethod
@@ -16,6 +18,18 @@ class Verb:
                 class_dict.update({subclass.__name__.lower(): subclass})
 
         return class_dict
+
+    @staticmethod
+    def _find_targets(self, session: Session, character: Character, noun_chunks: List[str]) -> List[MudObject]:
+        """
+        Matches noun_chunks to MudObjects with a matching short description
+        """
+        targets = []
+        for chunk in noun_chunks:
+            target_matches = Room.match_short_desc(session, chunk, character.parent)
+            if target_matches:
+                targets.append(target_matches[0])
+        return targets
     
 class VerbResponse:
     """

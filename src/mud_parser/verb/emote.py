@@ -163,19 +163,19 @@ class Emote(Verb):
     @classmethod
     def execute(cls, session: Session, character: Character, phrase: Phrase) -> VerbResponse:
         descriptor = phrase.descriptors[0] if phrase.descriptors else None
-        target_name = MudObject.get_short_desc(session, phrase.targets[0][1])
-        if target_name and descriptor:
+        targets = Verb._find_targets(session, character, phrase.noun_chunks)
+        if targets and descriptor:
             return VerbResponse(message_i=cls.FIRST_TARGET_STRING,
                                 character_id=character.id,
                                 message_you=cls.SECOND_TARGET_STRING,
-                                target_id=phrase.target_id,
+                                target_id=phrase.targets[0].id,
                                 message_they=cls.THIRD_TARGET_STRING,
                                 room_id=character.parent)
-        if target_name:
+        if targets:
             return VerbResponse(message_i=cls.FIRST_BASE_TARGET_STRING,
                                 character_id=character.id,
                                 message_you=cls.SECOND_BASE_TARGET_STRING,
-                                target_id=phrase.target_id,
+                                target_id=phrase.targets[0].id,
                                 message_they=cls.THIRD_BASE_TARGET_STRING,
                                 room_id=character.parent)
         if descriptor:
