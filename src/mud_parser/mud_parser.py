@@ -85,7 +85,6 @@ class Phrase:
         except IndexError:
             raise StopIteration
 
-
 class MudParser:
     """
     Turn a client string into an executable command

@@ -14,14 +14,15 @@ MUDOBJECT = MudObject(
 ROOM_DESC = 'You are in the void.'
 TARGET_DESC = 'a stinky green goblin'
 
-#class TestMudParser(unittest.TestCase):
-#    def test_response(self):
-#        """
-#        """
-#        print(Room.match_short_desc())
+@patch.object(Room, 'get_desc', lambda x, y: ROOM_DESC)
+class TestMudParser(unittest.TestCase):
+    def test_response(self):
+        """
+        """
+        print(Room.get_desc())
 
 @patch.object(Room, 'match_short_desc', lambda x, y, z: [MUDOBJECT])
-@patch.object(Room, 'get_desc', lambda x, y: ROOM_DESC)
+
 class TestPhrase(unittest.TestCase):
     def test_action(self):
         """
