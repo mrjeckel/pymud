@@ -58,7 +58,7 @@ class Look(Action):
             desc = Room.get_desc(session, character.parent)
         else:
             try:
-                targets = Verb._find_targets(session, character, phrase.noun_chunks)
+                targets = Verb.find_targets(session, character, phrase.noun_chunks)
                 desc = targets[0].long_desc
             except IndexError:
                 raise UnknownTarget

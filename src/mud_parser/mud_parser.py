@@ -19,7 +19,7 @@ class Phrase:
     """
     Transforms a client string into an actionable object
     """
-    EXCLUDE_FROM_NOUN_CHUNKS = ['DET']
+    EXCLUDE_FROM_NOUN_CHUNKS = ['DET', 'ADV']
 
     def __init__(self, phrase: str):
         self.is_emote = False
@@ -53,24 +53,21 @@ class Phrase:
         """
         Construct noun phrases with adjectives and nouns
         """
-        nouns = [word for word in doc[1:] if word.pos_ == 'NOUN']
-        import pdb;
-        pdb.set_trace()
+        stripped_phrase = [token for token in doc[1:] if
+                           token.pos_ not in self.EXCLUDE_FROM_NOUN_CHUNKS]
         noun_chunks = []
-        for chunk in doc[1:].noun_chunks:
-            for noun in copy.copy(nouns):
-                nouns.remove(noun)
-                if noun not in chunk:
-                    noun_chunks.append(noun)          
-                else:
-                    break
-            noun_chunk = [token.text for token in chunk if token.pos_ not in self.EXCLUDE_FROM_NOUN_CHUNKS]
-            noun_chunks.append(' '.join(noun_chunk))
-        if noun_chunks:
-            return noun_chunks
-        else:
-            return nouns
-    
+        local_chunk  = ''
+        for token in stripped_phrase:
+            if token.pos_ == 'ADP':
+                if local_chunk:
+                    noun_chunks.append(local_chunk.strip())
+                    local_chunk = ''
+            else:
+                local_chunk = local_chunk + ' ' + token.text
+        if local_chunk:
+            noun_chunks.append(local_chunk.strip())
+        return noun_chunks
+
     def __iter__(self):
         """
         Builds a list with seperate parts of speech as elements

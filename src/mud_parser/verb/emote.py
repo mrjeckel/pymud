@@ -163,7 +163,7 @@ class Emote(Verb):
     @classmethod
     def execute(cls, session: Session, character: Character, phrase: Phrase) -> VerbResponse:
         descriptor = phrase.descriptors[0] if phrase.descriptors else None
-        targets = Verb._find_targets(session, character, phrase.noun_chunks)
+        targets = Verb.find_targets(session, character, phrase.noun_chunks)
         if targets and descriptor:
             return VerbResponse(message_i=cls.FIRST_TARGET_STRING,
                                 character_id=character.id,

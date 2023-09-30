@@ -22,7 +22,15 @@ CHARACTER = Character(
 ROOM_DESC = 'You are in the void.'
 TARGET_DESC = 'a stinky green goblin'
 
-@patch.object(Room, 'match_short_desc', lambda x, y, z: [MUDOBJECT])
+MUD_OBJECTS = [MUDOBJECT, CHARACTER]
+
+def mock_match_short_desc(x, y, z):
+    """
+    Mock - Finds objects where y is a substring of short_desc
+    """
+    return [object for object in MUD_OBJECTS if y in object.short_desc]
+
+@patch.object(Room, 'match_short_desc', mock_match_short_desc)
 @patch.object(Room, 'get_desc', lambda x, y: ROOM_DESC)
 class TestMudParser(unittest.TestCase):
     def test_unknown_verb(self):
