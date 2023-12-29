@@ -1,17 +1,16 @@
-version: '0.1'
-name: pymud
+version: '3'
 services:
   mud:
     image: python:3.10
+    container_name: pymud-mud
     command: >
       sh -c "pip install -r /requirements.txt
       && python -m spacy download en_core_web_sm
-      && alembic revision --autogenerate
       && alembic upgrade head
       && python /src/data/init_data.py
       ; python /src/pymud.py"
     environment:
-      - DB_HOST=pymud-db-1
+      - DB_HOST=pymud-db-dev
       - DB_PORT=5432
       - DB_USER=mud_admin
       - DB_PASSWORD=mud123
@@ -26,9 +25,9 @@ services:
       - ../migrations:/migrations
     depends_on:
       - db
-      
   db:
     image: postgres:15.3
+    container_name: pymud-db-dev
     command: "postgres -c log_statement=all"
     restart: always
     environment:
