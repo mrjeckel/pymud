@@ -1,5 +1,5 @@
 # What is this?
-A framework for building multi-user dungeons(MUDs). It currently handles:
+A framework for building [multi-user dungeons](https://en.wikipedia.org/wiki/Multi-user_dungeon). It currently handles:
 - client connections
 - global events
 - command parsing
