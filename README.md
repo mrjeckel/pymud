@@ -27,5 +27,5 @@ A framework for building [multi-user dungeons](https://en.wikipedia.org/wiki/Mul
 - Build commands
 - Containers
 - Character Creation & Authentication
-- Character advancement plugins
-- Combat system plugins
+- Combat
+- Chracter advancement
