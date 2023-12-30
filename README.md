@@ -21,7 +21,7 @@ A framework for building [multi-user dungeons](https://en.wikipedia.org/wiki/Mul
 ~/PyMUD$: telnet localhost 5000
 ```
 
-# Future Work
+# To Do
 - Finish validation of targetting
 - Fix room descriptions
 - Build commands
